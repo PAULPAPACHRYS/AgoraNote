@@ -1,0 +1,72 @@
+services:
+  db:
+    # Keep the major version in step with the Railway Postgres instance (Railway's default is 16).
+    image: postgres:16
+    environment:
+      POSTGRES_USER: agoranote
+      POSTGRES_PASSWORD: agoranote
+      POSTGRES_DB: agoranote
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agoranote -d agoranote"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
+    environment:
+      # File-change events don't cross Docker bind mounts on Windows/macOS, so poll instead.
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - ./backend:/app
+      - uploads:/data/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    command: celery -A app.worker worker --loglevel=info
+    env_file: .env
+    volumes:
+      - ./backend:/app
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: node:24
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    env_file: .env
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:
+  uploads:
+  frontend_node_modules:
