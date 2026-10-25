@@ -13,6 +13,7 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.models import SourceFile, StudySet, User
 from app.schemas import StudySetCreated, StudySetDetail, StudySetListItem
+from app.worker import process_study_set
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/study-sets")
@@ -53,6 +54,17 @@ def validate_upload(upload: UploadFile) -> str:
     if upload.size > config.MAX_FILE_MB * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f'"{name}" is larger than {config.MAX_FILE_MB} MB.')
     return kind
+
+
+def enqueue_processing(db: Session, study_set: StudySet) -> None:
+    """Hand the set to the worker. If Redis is unreachable, mark it failed so the user can retry."""
+    try:
+        process_study_set.delay(study_set.id)
+    except Exception:
+        log.exception("Could not enqueue study set %s", study_set.id)
+        study_set.status = "failed"
+        study_set.error = "Processing could not be started. Please try again."
+        db.commit()
 
 
 @router.post("", response_model=StudySetCreated, status_code=201)
@@ -108,7 +120,7 @@ def create_study_set(
             storage.delete(key)
         raise
 
-    # Processing (a Celery task) is enqueued here from Phase 2 on.
+    enqueue_processing(db, study_set)
     return {"id": study_set.id}
 
 
@@ -122,6 +134,19 @@ def list_study_sets(user: User = Depends(get_current_user), db: Session = Depend
 @router.get("/{set_id}", response_model=StudySetDetail)
 def get_study_set(set_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return get_owned_set(db, user, set_id)
+
+
+@router.post("/{set_id}/retry", response_model=StudySetDetail)
+def retry_study_set(set_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    study_set = get_owned_set(db, user, set_id)
+    if study_set.status != "failed":
+        raise HTTPException(status_code=409, detail="Only a failed study set can be retried.")
+    study_set.status = "queued"
+    study_set.status_message = ""
+    study_set.error = None
+    db.commit()
+    enqueue_processing(db, study_set)
+    return study_set
 
 
 @router.delete("/{set_id}", status_code=204)
