@@ -139,3 +139,25 @@ class ChapterOut(BaseModel):
         if len({item.topic.strip().casefold() for item in quiz}) != len(quiz):
             raise ValueError("every quiz item must cover a different topic")
         return quiz
+
+
+# --- Chapter page (reuses the content models above) -------------------------------------------
+
+class ChapterLink(BaseModel):
+    id: int
+    title: str
+
+
+class ChapterDetail(BaseModel):
+    id: int
+    position: int
+    title: str
+    study_set_id: int
+    study_set_title: str | None
+    chapter_count: int
+    summary: list[str]
+    key_concepts: list[KeyConcept]
+    qa_pairs: list[QAPair]
+    study_aids: StudyAids
+    prev_chapter: ChapterLink | None
+    next_chapter: ChapterLink | None

@@ -102,7 +102,7 @@ export default function StudySet() {
         <>
           {studySet.overview && <p className="overview">{studySet.overview}</p>}
           <h2>Chapters</h2>
-          <ChapterList chapters={studySet.chapters} />
+          <ChapterList setId={studySet.id} chapters={studySet.chapters} />
         </>
       )}
 
