@@ -332,6 +332,91 @@ textarea {
   font-weight: 600;
 }
 
+.chapter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.chapter-points {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.chapter-points .progress {
+  flex: 1;
+  max-width: 260px;
+}
+
+.lock-note {
+  color: var(--muted);
+}
+
+.done-note {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* Progress bars */
+
+.progress {
+  position: relative;
+  height: 0.75rem;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.progress-small {
+  height: 0.45rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.progress-fill.reached {
+  background: var(--success);
+}
+
+/* The unlock threshold: a thin line across the bar. */
+.progress-marker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+}
+
+.overall-progress {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.overall-progress p {
+  margin: 0.5rem 0 0;
+}
+
+.card-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.card-progress .progress {
+  flex: 1;
+}
+
 /* Chapter */
 
 .chapter-kicker {
@@ -472,6 +557,137 @@ textarea {
   width: 1.1rem;
   height: 1.1rem;
   margin-top: 0.2rem;
+}
+
+/* Quiz */
+
+.locked {
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px dashed var(--muted);
+  border-radius: var(--radius);
+}
+
+.locked-title,
+.feedback-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-top: 0;
+}
+
+.quiz-points {
+  margin-bottom: 1.25rem;
+}
+
+.quiz-points-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.quiz-points p {
+  margin: 0.4rem 0 0;
+}
+
+.question-card {
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.question-card > p:first-child {
+  margin-top: 0;
+}
+
+.question-prompt {
+  font-size: 1.2rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.option {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  font-size: 1rem;
+  transition: background-color 0.25s, border-color 0.25s;
+}
+
+.option:not(:disabled):hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.option:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.option.correct {
+  background: var(--success-soft);
+  border: 2px solid var(--success);
+}
+
+.option.wrong {
+  background: var(--danger-soft);
+  border: 2px solid var(--danger);
+}
+
+.feedback {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  animation: appear 0.3s ease;
+}
+
+.feedback-correct {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.feedback-wrong {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.feedback p {
+  color: var(--text);
+}
+
+.feedback .feedback-title {
+  color: inherit;
+}
+
+.banner {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  animation: appear 0.3s ease;
+}
+
+.banner-success {
+  background: var(--success-soft);
+  border: 1px solid var(--success);
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .chapter-nav {

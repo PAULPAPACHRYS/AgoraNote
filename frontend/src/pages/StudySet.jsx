@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { api } from "../api.js";
 import ChapterList from "../components/ChapterList.jsx";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { setTitle, statusLabel } from "../status.js";
 
 const POLL_MS = 3000;
@@ -101,6 +102,15 @@ export default function StudySet() {
       {status === "ready" && (
         <>
           {studySet.overview && <p className="overview">{studySet.overview}</p>}
+          <div className="overall-progress">
+            <ProgressBar value={studySet.progress.earned} max={studySet.progress.total} label="Overall progress" />
+            <p>
+              <strong>
+                {studySet.progress.earned} / {studySet.progress.total} points
+              </strong>{" "}
+              · {studySet.progress.percent}%
+            </p>
+          </div>
           <h2>Chapters</h2>
           <ChapterList setId={studySet.id} chapters={studySet.chapters} />
         </>

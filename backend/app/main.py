@@ -7,7 +7,7 @@ from app import config
 from app.auth import get_current_user
 from app.db import engine
 from app.models import Base, User
-from app.routes import chapters, study_sets
+from app.routes import chapters, quiz, study_sets
 from app.schemas import UserOut
 
 # Dev auth trusts everyone as the same user, so it must never reach production.
@@ -33,6 +33,7 @@ app.add_middleware(
 
 app.include_router(study_sets.router)
 app.include_router(chapters.router)
+app.include_router(quiz.router)
 
 
 @app.get("/api/health")

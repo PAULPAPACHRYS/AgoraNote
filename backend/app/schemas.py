@@ -24,20 +24,34 @@ class StudySetCreated(BaseModel):
     id: int
 
 
-class StudySetListItem(ORMModel):
+class Progress(BaseModel):
+    earned: int
+    total: int
+    percent: int
+
+
+class StudySetListItem(BaseModel):
     id: int
     title: str | None
     status: str
+    progress: Progress
     created_at: datetime
 
 
-class ChapterListItem(ORMModel):
+class ChapterScore(BaseModel):
+    """A chapter's points and lock state (see gamification.score_chapters)."""
+
     id: int
     position: int
     title: str
+    earned: int
+    max: int
+    unlock_threshold: int
+    quiz_unlocked: bool
+    completed: bool
 
 
-class StudySetDetail(ORMModel):
+class StudySetDetail(BaseModel):
     id: int
     title: str | None
     status: str
@@ -45,7 +59,60 @@ class StudySetDetail(ORMModel):
     error: str | None
     overview: str
     created_at: datetime
-    chapters: list[ChapterListItem]
+    progress: Progress
+    chapters: list[ChapterScore]
+
+
+class ChapterPoints(BaseModel):
+    earned: int
+    max: int
+    unlock_threshold: int
+
+
+class QuizQuestion(ORMModel):
+    """An unanswered question as the player sees it: never the answer or the explanation."""
+
+    id: int
+    prompt: str
+    options: list[str]
+
+
+class QuizTopic(BaseModel):
+    id: int
+    name: str
+    points: int
+    mastered: bool
+    preparing: bool  # a replacement question is being generated
+    question: QuizQuestion | None
+
+
+class QuizState(BaseModel):
+    chapter_id: int
+    earned: int
+    max: int
+    unlock_threshold: int
+    progress: Progress
+    topics: list[QuizTopic]
+
+
+class AnswerIn(BaseModel):
+    selected_index: int = Field(ge=0, le=3)
+
+
+class ChapterLinkOut(BaseModel):
+    id: int
+    title: str
+
+
+class AnswerOut(BaseModel):
+    correct: bool
+    correct_index: int
+    explanation: str
+    points_awarded: int
+    chapter: ChapterPoints
+    progress: Progress
+    unlocked_chapter: ChapterLinkOut | None  # only on the answer that crosses the threshold
+    replacement_pending: bool
 
 
 # --- LLM output contracts (see prompts.py) ----------------------------------------------------
@@ -143,11 +210,6 @@ class ChapterOut(BaseModel):
 
 # --- Chapter page (reuses the content models above) -------------------------------------------
 
-class ChapterLink(BaseModel):
-    id: int
-    title: str
-
-
 class ChapterDetail(BaseModel):
     id: int
     position: int
@@ -155,9 +217,15 @@ class ChapterDetail(BaseModel):
     study_set_id: int
     study_set_title: str | None
     chapter_count: int
+    earned: int
+    max: int
+    unlock_threshold: int
+    quiz_unlocked: bool
+    completed: bool
+    points_to_unlock: int  # more points needed in the previous chapter; 0 when unlocked
     summary: list[str]
     key_concepts: list[KeyConcept]
     qa_pairs: list[QAPair]
     study_aids: StudyAids
-    prev_chapter: ChapterLink | None
-    next_chapter: ChapterLink | None
+    prev_chapter: ChapterLinkOut | None
+    next_chapter: ChapterLinkOut | None

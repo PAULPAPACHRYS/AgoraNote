@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api.js";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { setTitle, statusLabel } from "../status.js";
 
 export default function Dashboard() {
@@ -46,6 +47,12 @@ export default function Dashboard() {
               <Link to={`/sets/${s.id}`} className="card">
                 <span className="card-title">{setTitle(s)}</span>
                 <span className={`badge badge-${s.status}`}>{statusLabel(s.status)}</span>
+                {s.status === "ready" && (
+                  <span className="card-progress">
+                    <ProgressBar small value={s.progress.earned} max={s.progress.total} label="Progress" />
+                    <span className="small">{s.progress.percent}%</span>
+                  </span>
+                )}
                 <span className="muted small">{new Date(s.created_at).toLocaleDateString()}</span>
               </Link>
             </li>

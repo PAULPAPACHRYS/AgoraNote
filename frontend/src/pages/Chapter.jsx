@@ -3,14 +3,34 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { api } from "../api.js";
 import Flashcards from "../components/Flashcards.jsx";
+import Quiz from "../components/Quiz.jsx";
 
-// The Quiz tab joins these in Phase 4.
 const TABS = [
   { id: "summary", label: "Summary" },
   { id: "concepts", label: "Key concepts" },
   { id: "practice", label: "Q&A practice" },
   { id: "aids", label: "Study aids" },
+  { id: "quiz", label: "Quiz" },
 ];
+
+function QuizLocked({ chapter }) {
+  return (
+    <div className="locked">
+      <p className="locked-title">
+        <span aria-hidden="true">🔒</span> This quiz is locked
+      </p>
+      <p>
+        Earn {chapter.points_to_unlock} more points in Chapter {chapter.position - 1} to unlock this quiz.
+        The study materials in the other tabs are always open.
+      </p>
+      {chapter.prev_chapter && (
+        <Link to={`/sets/${chapter.study_set_id}/chapters/${chapter.prev_chapter.id}?tab=quiz`}>
+          Go to the Chapter {chapter.position - 1} quiz →
+        </Link>
+      )}
+    </div>
+  );
+}
 
 function Summary({ paragraphs }) {
   return (
@@ -145,6 +165,8 @@ export default function Chapter() {
         {tab === "concepts" && <KeyConcepts concepts={chapter.key_concepts} />}
         {tab === "practice" && <Flashcards key={chapter.id} cards={chapter.qa_pairs} />}
         {tab === "aids" && <StudyAids key={chapter.id} aids={chapter.study_aids} />}
+        {tab === "quiz" &&
+          (chapter.quiz_unlocked ? <Quiz key={chapter.id} chapter={chapter} /> : <QuizLocked chapter={chapter} />)}
       </div>
 
       <nav className="chapter-nav">

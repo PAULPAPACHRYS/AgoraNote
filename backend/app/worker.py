@@ -7,6 +7,7 @@ import tempfile
 import httpx
 from celery import Celery
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 
 from app import config, storage
 from app.ai import generate
@@ -71,6 +72,42 @@ def process_study_set(self, study_set_id: int):
             log.exception("Processing study set %s failed", study_set_id)
             study_set.error = str(exc) if isinstance(exc, ProcessingError) else GENERIC_ERROR
             set_status(db, study_set, "failed")
+
+
+@celery.task(
+    bind=True, autoretry_for=(httpx.HTTPError,), retry_backoff=True, max_retries=3,
+)
+def generate_replacement_question(self, topic_id: int):
+    """After a wrong answer: a new question on the same topic, different from all previous ones."""
+    with SessionLocal() as db:
+        topic = db.get(Topic, topic_id)
+        # Dedupe: nothing to do if the topic is gone, mastered, or already has a question waiting.
+        if topic is None or topic.mastered_at or any(q.status == "active" for q in topic.questions):
+            return
+        previous = topic.questions  # ordered by id, so the last one is the most recent
+
+        try:
+            new = generate.replacement_question(topic.chapter.content, topic.name, [q.prompt for q in previous])
+            prompt, explanation = new.question, new.explanation
+            options, correct_index = shuffle_options(new.options, new.correct_index)
+        except Exception as exc:
+            if isinstance(exc, httpx.HTTPError) and self.request.retries < self.max_retries:
+                raise  # autoretry_for re-queues the task with backoff
+            # Never leave the player stuck: ask the most recent question again, options reshuffled.
+            log.exception("Replacement question for topic %s failed; reusing the last one", topic_id)
+            last = previous[-1]
+            prompt, explanation = last.prompt, last.explanation
+            options, correct_index = shuffle_options(last.options, last.correct_index)
+
+        db.add(Question(
+            topic_id=topic.id, prompt=prompt, options=options, correct_index=correct_index,
+            explanation=explanation, status="active",
+        ))
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another run got there first: the unique index allows one active question per topic.
+            db.rollback()
 
 
 def run_pipeline(db, study_set: StudySet) -> None:

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app import config, storage
 from app.auth import get_current_user
 from app.db import get_db
+from app.gamification import load_chapter_scores, progress
 from app.models import SourceFile, StudySet, User
 from app.schemas import StudySetCreated, StudySetDetail, StudySetListItem
 from app.worker import process_study_set
@@ -124,16 +125,38 @@ def create_study_set(
     return {"id": study_set.id}
 
 
+def set_detail(db: Session, study_set: StudySet) -> dict:
+    scores = load_chapter_scores(db, study_set.id)
+    return {
+        "id": study_set.id,
+        "title": study_set.title,
+        "status": study_set.status,
+        "status_message": study_set.status_message,
+        "error": study_set.error,
+        "overview": study_set.overview,
+        "created_at": study_set.created_at,
+        "progress": progress(scores),
+        "chapters": scores,
+    }
+
+
 @router.get("", response_model=list[StudySetListItem])
 def list_study_sets(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.scalars(
+    sets = db.scalars(
         select(StudySet).where(StudySet.user_id == user.id).order_by(StudySet.created_at.desc())
     ).all()
+    return [
+        {
+            "id": s.id, "title": s.title, "status": s.status, "created_at": s.created_at,
+            "progress": progress(load_chapter_scores(db, s.id)),
+        }
+        for s in sets
+    ]
 
 
 @router.get("/{set_id}", response_model=StudySetDetail)
 def get_study_set(set_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return get_owned_set(db, user, set_id)
+    return set_detail(db, get_owned_set(db, user, set_id))
 
 
 @router.post("/{set_id}/retry", response_model=StudySetDetail)
@@ -146,7 +169,7 @@ def retry_study_set(set_id: int, user: User = Depends(get_current_user), db: Ses
     study_set.error = None
     db.commit()
     enqueue_processing(db, study_set)
-    return study_set
+    return set_detail(db, study_set)
 
 
 @router.delete("/{set_id}", status_code=204)

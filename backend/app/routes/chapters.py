@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
+from app.gamification import load_chapter_scores, points_to_unlock
 from app.models import Chapter, StudySet, User
 from app.schemas import ChapterDetail
 
@@ -29,6 +30,8 @@ def get_chapter(chapter_id: int, user: User = Depends(get_current_user), db: Ses
     chapter = get_owned_chapter(db, user, chapter_id)
     siblings = chapter.study_set.chapters  # ordered by position
     index = siblings.index(chapter)
+    scores = load_chapter_scores(db, chapter.study_set_id)
+    score = next(s for s in scores if s["id"] == chapter.id)
     return {
         "id": chapter.id,
         "position": chapter.position,
@@ -36,6 +39,12 @@ def get_chapter(chapter_id: int, user: User = Depends(get_current_user), db: Ses
         "study_set_id": chapter.study_set_id,
         "study_set_title": chapter.study_set.title,
         "chapter_count": len(siblings),
+        "earned": score["earned"],
+        "max": score["max"],
+        "unlock_threshold": score["unlock_threshold"],
+        "quiz_unlocked": score["quiz_unlocked"],
+        "completed": score["completed"],
+        "points_to_unlock": points_to_unlock(scores, chapter.id),
         "summary": chapter.summary,
         "key_concepts": chapter.key_concepts,
         "qa_pairs": chapter.qa_pairs,
