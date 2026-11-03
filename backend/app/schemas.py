@@ -115,6 +115,15 @@ class AnswerOut(BaseModel):
     replacement_pending: bool
 
 
+class SearchResult(BaseModel):
+    study_set_id: int
+    study_set_title: str | None
+    chapter_id: int
+    chapter_position: int
+    chapter_title: str
+    snippet: str  # matches wrapped in [[ ]]
+
+
 # --- LLM output contracts (see prompts.py) ----------------------------------------------------
 
 class ChapterSpan(BaseModel):

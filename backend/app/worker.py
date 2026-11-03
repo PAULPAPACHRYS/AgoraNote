@@ -46,7 +46,7 @@ def shuffle_options(options: list[str], correct_index: int) -> tuple[list[str], 
 
 def build_search_text(chapter: Chapter) -> str:
     parts = [chapter.title, *chapter.summary]
-    parts += [f"{c['term']} {c['explanation']}" for c in chapter.key_concepts]
+    parts += [f"{c['term']}: {c['explanation']}" for c in chapter.key_concepts]
     parts += [f"{qa['question']} {qa['answer']}" for qa in chapter.qa_pairs]
     parts.append(chapter.content)
     return "\n".join(parts)

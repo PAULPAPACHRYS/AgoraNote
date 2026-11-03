@@ -77,6 +77,22 @@ a {
   text-decoration: none;
 }
 
+.search-form {
+  flex: 1;
+  max-width: 420px;
+  margin-left: auto;
+}
+
+.search-form input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font: inherit;
+  color: inherit;
+}
+
 .main {
   max-width: 960px;
   margin: 0 auto;
@@ -697,6 +713,54 @@ textarea {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+/* Search */
+
+.result-group h2 {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.result:hover {
+  border-color: var(--accent);
+}
+
+.result-title {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.result-snippet {
+  color: var(--muted);
+}
+
+mark {
+  background: #fde68a;
+  color: var(--text);
+  padding: 0 0.1em;
+  border-radius: 2px;
 }
 
 .danger-zone {
