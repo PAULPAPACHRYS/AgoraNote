@@ -1,9 +1,11 @@
 """Unit tests for the pure helpers around the LLM (no network, no database)."""
 import math
+import subprocess
 
 import pytest
 
-from app.ai import generate, prompts
+from app import config
+from app.ai import extract, generate, prompts, transcribe
 from app.ai.extract import strip_repeated_lines
 from app.ai.llm import strip_fences
 from app.schemas import ChapterSpan, QuestionDraft
@@ -110,3 +112,54 @@ def test_repeated_page_headers_and_page_numbers_are_removed():
 def test_short_documents_are_left_alone():
     pages = ["Title\nIntro", "Title\nMore"]
     assert strip_repeated_lines(pages) == pages
+
+
+def test_prepare_audio_makes_mono_16khz_segments(tmp_path):
+    source = tmp_path / "lecture.wav"  # 25 seconds of tone, cut into 10-second segments
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=25", str(source)],
+                   check=True)
+    out = tmp_path / "out"
+    out.mkdir()
+    segments = extract.prepare_audio(str(source), "lecture.wav", str(out), segment_seconds=10)
+    assert len(segments) == 3
+    assert abs(sum(extract.audio_duration(s) for s in segments) - 25) < 1
+    probe = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=channels,sample_rate", "-of", "csv=p=0",
+                            segments[0]], capture_output=True, text=True).stdout.strip()
+    assert probe == "16000,1"
+
+
+def test_prepare_audio_rejects_files_without_sound(tmp_path):
+    bad = tmp_path / "notes.mp4"
+    bad.write_bytes(b"this is not a video")
+    with pytest.raises(extract.ProcessingError):
+        extract.prepare_audio(str(bad), "notes.mp4", str(tmp_path))
+
+
+def test_first_segment_decides_the_language(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "TRANSCRIBE_PROVIDER", "openai")
+    monkeypatch.setattr(transcribe, "prepare_audio", lambda path, name, out: ["s1", "s2", "s3"])
+    calls = []
+
+    def fake_segment(path, language=None):
+        calls.append((path, language))
+        return f"text of {path}", "en" if path == "s2" else "el"  # s2 would be mis-detected
+
+    monkeypatch.setattr(transcribe, "transcribe_segment", fake_segment)
+    progress = []
+    text = transcribe.transcribe("lecture.mp4", "lecture.mp4", lambda i, n: progress.append((i, n)))
+    assert calls == [("s1", None), ("s2", "el"), ("s3", "el")]
+    assert text == "text of s1\n\ntext of s2\n\ntext of s3"
+    assert progress == [(1, 3), (2, 3), (3, 3)]
+
+
+def test_mock_transcription_needs_no_ffmpeg_or_network():
+    assert "Mock transcript of talk.mp3" in transcribe.transcribe("/nowhere/talk.mp3", "talk.mp3")
+
+
+def test_whisper_repetition_loops_are_collapsed():
+    loop = "Λέω ότι η σχέση είναι αντισυμμετρική. " + "Ρέω ότι η σχέση είναι αντισυμμετρική. " * 6 + "Αυτό σημαίνει κάτι."
+    assert transcribe.collapse_repeats(loop) == (
+        "Λέω ότι η σχέση είναι αντισυμμετρική. Ρέω ότι η σχέση είναι αντισυμμετρική. Αυτό σημαίνει κάτι."
+    )
+    # Two in a row can be real speech ("Yes. Yes."): kept.
+    assert transcribe.collapse_repeats("Thank you. Thank you. Bye.") == "Thank you. Thank you. Bye."

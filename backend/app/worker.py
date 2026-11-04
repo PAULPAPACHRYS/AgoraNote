@@ -22,6 +22,10 @@ log = logging.getLogger(__name__)
 
 celery = Celery("agoranote", broker=config.REDIS_URL, backend=config.REDIS_URL)
 celery.conf.broker_connection_retry_on_startup = True
+# Two queues, each with its own worker (see docker-compose.yml): study sets are processed one at a
+# time, and replacement quiz questions never wait behind a long transcription.
+celery.conf.task_default_queue = "processing"
+celery.conf.task_routes = {"app.worker.generate_replacement_question": {"queue": "quick"}}
 
 MIN_INPUT_CHARS = 500
 GENERIC_ERROR = "Something went wrong while processing this study set. Please try again."
@@ -146,8 +150,14 @@ def run_pipeline(db, study_set: StudySet) -> None:
 
         audio = [f for f in files if f.kind == "audio"]
         for i, f in enumerate(audio, start=1):
-            set_status(db, study_set, "transcribing", f"Transcribing recording {i} of {len(audio)}")
-            texts[f.position] = transcribe(local[f.position])
+            label = f"Transcribing recording {i} of {len(audio)}"
+            set_status(db, study_set, "transcribing", label)
+            texts[f.position] = transcribe(
+                local[f.position], f.original_filename,
+                on_progress=lambda part, parts: set_status(db, study_set, "transcribing", f"{label} (part {part} of {parts})"),
+            )
+            if not texts[f.position].strip():
+                raise ProcessingError(f'No speech was found in "{f.original_filename}".')
 
     # Join the files in upload order; with several files, a heading line marks where each starts.
     if len(files) == 1:

@@ -1,5 +1,8 @@
-"""Getting plain text out of uploaded files, and cutting it into blocks for the LLM."""
+"""Getting text out of uploaded files, preparing audio for transcription, and cutting text into blocks."""
+import glob
+import os
 import re
+import subprocess
 from collections import Counter
 
 import docx
@@ -131,3 +134,38 @@ def split_into_blocks(text: str, size: int = BLOCK_CHARS) -> list[str]:
     if current:
         blocks.append(current)
     return blocks
+
+
+# --- audio and video ------------------------------------------------------------------------------
+
+# 10-minute segments of mono 16 kHz MP3 at 32 kbit/s are ~2.4 MB: far below upload limits (OpenAI's
+# transcription endpoint accepts at most 25 MB), and 16 kHz mono is what Whisper works with anyway.
+SEGMENT_SECONDS = 600
+
+
+def audio_duration(path: str) -> float:
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+        capture_output=True, text=True,
+    )
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
+def prepare_audio(path: str, filename: str, out_dir: str, segment_seconds: int = SEGMENT_SECONDS) -> list[str]:
+    """Convert an audio/video file to mono 16 kHz MP3 segments in out_dir; returns their paths in order."""
+    result = subprocess.run(
+        [
+            "ffmpeg", "-loglevel", "error", "-i", path,
+            "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k",  # drop video; mono, 16 kHz, low bitrate
+            "-f", "segment", "-segment_time", str(segment_seconds), "-reset_timestamps", "1",
+            os.path.join(out_dir, "segment_%03d.mp3"),
+        ],
+        capture_output=True, text=True,
+    )
+    segments = sorted(glob.glob(os.path.join(out_dir, "segment_*.mp3")))
+    if result.returncode != 0 or not segments:
+        raise ProcessingError(f'"{filename}" could not be read as audio or video (is there a sound track?).')
+    return segments

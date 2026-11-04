@@ -42,11 +42,11 @@ services:
       redis:
         condition: service_healthy
 
-  worker:
+  # Two Celery workers from the same image: "processing" handles study sets one at a time, "quick"
+  # handles replacement quiz questions, so those never wait behind a long transcription.
+  worker: &worker
     build: ./backend
-    # Two tasks at a time (as on Railway): one study set can process while a replacement question is
-    # generated. More would only queue up in a local Ollama that handles one request at a time.
-    command: celery -A app.worker worker --loglevel=info --concurrency=2
+    command: celery -A app.worker worker --loglevel=info -Q processing --concurrency=1 -n processing@%h
     env_file: .env
     # Lets the worker reach Ollama running on the host machine. Docker Desktop (Windows/macOS) knows
     # this name already; the line is needed on Linux.
@@ -60,6 +60,31 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  worker-quick:
+    <<: *worker
+    command: celery -A app.worker worker --loglevel=info -Q quick --concurrency=1 -n quick@%h
+
+  # Local Whisper (faster-whisper behind an OpenAI-compatible API). Optional: needs an NVIDIA GPU, and
+  # only starts with `docker compose --profile gpu up`. A plain `docker compose up` works without it.
+  speaches:
+    profiles: [gpu]
+    # Pinned to the build that was tested (its unload endpoint deadlocks, hence WHISPER__TTL below).
+    image: ghcr.io/speaches-ai/speaches:latest-cuda@sha256:6ec12ebf890a17e0d4b242a8ba9e0eb1fb836e60e8a3c857aea9838d541579ac
+    environment:
+      # Unload Whisper from the GPU right after each request, so the LLM always has room.
+      WHISPER__TTL: "0"
+    volumes:
+      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub  # downloaded models survive restarts
+    ports:
+      - "8001:8000"  # only for trying it from the host; the worker uses http://speaches:8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   frontend:
     image: node:24
@@ -76,3 +101,5 @@ volumes:
   pgdata:
   uploads:
   frontend_node_modules:
+  hf-hub-cache:
+    name: hf-hub-cache  # a fixed name, so a volume created earlier with `docker run` is reused

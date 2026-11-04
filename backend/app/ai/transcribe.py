@@ -1,7 +1,21 @@
-"""Speech to text. Only the mock exists until the provider is chosen (Phase 7)."""
+"""Speech to text over the OpenAI-compatible /audio/transcriptions API, plain httpx.
+
+The same code works with speaches (local faster-whisper, see README) and OpenAI's own API;
+only TRANSCRIBE_BASE_URL, TRANSCRIBE_MODEL and TRANSCRIBE_API_KEY change.
+"""
+import logging
 import os
+import tempfile
+import time
+from collections.abc import Callable
+
+import httpx
 
 from app import config
+from app.ai.extract import audio_duration, prepare_audio, split_sentences
+from app.ai.gpu import use_gpu
+
+log = logging.getLogger(__name__)
 
 MOCK_TRANSCRIPT = (
     "This is a placeholder transcript, because transcription runs in mock mode. "
@@ -19,7 +33,87 @@ MOCK_TRANSCRIPT = (
 )
 
 
-def transcribe(audio_path: str) -> str:
+def transcribe(
+    audio_path: str,
+    filename: str = "",
+    on_progress: Callable[[int, int], None] | None = None,
+) -> str:
+    """Transcribe a whole recording (any audio/video format ffmpeg reads).
+
+    The recording is cut into <=10-minute segments that are transcribed in order. Whisper detects the
+    language on the first segment; that language is then passed for all other segments, because
+    detection on a single segment (e.g. one full of English terms in a Greek lecture) can go wrong.
+    `on_progress(i, n)` is called before segment i of n.
+    """
     if config.TRANSCRIBE_PROVIDER == "mock":
-        return f"(Mock transcript of {os.path.basename(audio_path)}.) {MOCK_TRANSCRIPT}"
-    raise RuntimeError(f"TRANSCRIBE_PROVIDER={config.TRANSCRIBE_PROVIDER} is not implemented yet.")
+        return f"(Mock transcript of {filename or os.path.basename(audio_path)}.) {MOCK_TRANSCRIPT}"
+
+    texts, language = [], None
+    with tempfile.TemporaryDirectory() as tmp:  # removed afterwards, also on errors
+        segments = prepare_audio(audio_path, filename or os.path.basename(audio_path), tmp)
+        for i, segment in enumerate(segments, start=1):
+            if on_progress:
+                on_progress(i, len(segments))
+            text, detected = transcribe_segment(segment, language)
+            language = language or detected
+            texts.append(collapse_repeats(text.strip()))
+    return "\n\n".join(t for t in texts if t)
+
+
+def collapse_repeats(text: str) -> str:
+    """Whisper sometimes gets stuck and writes the same sentence many times in a row; keep one.
+
+    Only runs of 3 or more identical sentences are collapsed: real speech rarely repeats a whole
+    sentence three times back to back.
+    """
+    sentences = split_sentences(text)
+    kept, i = [], 0
+    while i < len(sentences):
+        run = 1
+        while i + run < len(sentences) and sentences[i + run] == sentences[i]:
+            run += 1
+        kept.extend(sentences[i : i + (1 if run >= 3 else run)])
+        i += run
+    return " ".join(kept)
+
+
+def transcribe_segment(path: str, language: str | None = None) -> tuple[str, str | None]:
+    """Transcribe one short audio file; returns (text, detected language code or None).
+
+    Raises httpx errors for network problems, timeouts, rate limits and 5xx (the Celery task retries
+    those) and RuntimeError for other HTTP errors (retrying won't help).
+    """
+    data = {"model": config.TRANSCRIBE_MODEL, "response_format": "verbose_json", "temperature": "0"}
+    if language:
+        data["language"] = language
+    if config.TRANSCRIBE_VAD_FILTER:
+        data["vad_filter"] = "true"
+    headers = {"Authorization": f"Bearer {config.TRANSCRIBE_API_KEY}"} if config.TRANSCRIBE_API_KEY else {}
+    seconds_of_audio = audio_duration(path)
+
+    with use_gpu("transcribe"), open(path, "rb") as audio:
+        started = time.monotonic()
+        response = httpx.post(
+            f"{config.TRANSCRIBE_BASE_URL}/audio/transcriptions",
+            data=data,
+            files={"file": (os.path.basename(path), audio, "audio/mpeg")},
+            headers=headers,
+            timeout=httpx.Timeout(config.TRANSCRIBE_TIMEOUT_SECONDS, connect=10),
+        )
+        seconds = time.monotonic() - started
+
+    if response.status_code == 429 or response.status_code >= 500:
+        response.raise_for_status()  # temporary: let the task retry
+    if response.status_code >= 400:
+        raise RuntimeError(f"Transcription failed ({response.status_code}): {response.text[:500]}")
+
+    result = response.json()
+    # speaches returns a code ("el"); OpenAI returns a name ("greek") and only accepts codes back,
+    # and some models return no language at all. Only a 2-letter code is passed on to later segments.
+    detected = result.get("language")
+    detected = detected if isinstance(detected, str) and len(detected) == 2 else None
+    log.info(
+        "Transcribed %.0fs of audio in %.1fs (%.1fx real time), language=%s",
+        seconds_of_audio, seconds, seconds_of_audio / seconds if seconds else 0, language or detected,
+    )
+    return result.get("text", ""), detected

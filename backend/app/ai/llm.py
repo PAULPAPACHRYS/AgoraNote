@@ -11,6 +11,7 @@ import time
 import httpx
 
 from app import config
+from app.ai.gpu import use_gpu
 
 log = logging.getLogger(__name__)
 
@@ -54,9 +55,10 @@ def complete_json(system: str, user: str, schema: dict | None = None, name: str 
     headers = {"Authorization": f"Bearer {config.LLM_API_KEY}"} if config.LLM_API_KEY else {}
     timeout = httpx.Timeout(config.LLM_TIMEOUT_SECONDS, connect=10)
 
-    started = time.monotonic()
-    response = httpx.post(f"{config.LLM_BASE_URL}/chat/completions", json=body, headers=headers, timeout=timeout)
-    seconds = time.monotonic() - started
+    with use_gpu("llm"):  # waits while Whisper is transcribing a segment (local GPU only)
+        started = time.monotonic()
+        response = httpx.post(f"{config.LLM_BASE_URL}/chat/completions", json=body, headers=headers, timeout=timeout)
+        seconds = time.monotonic() - started
 
     if response.status_code == 429 or response.status_code >= 500:
         response.raise_for_status()  # temporary: let the task retry

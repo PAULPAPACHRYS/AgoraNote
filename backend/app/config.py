@@ -39,9 +39,20 @@ LLM_TIMEOUT_SECONDS = int(os.environ.get("LLM_TIMEOUT_SECONDS", "600"))
 # Sent as "reasoning_effort" when set. "none" switches off a model's hidden thinking (much faster on
 # Ollama); leave empty for models/providers that don't accept the field.
 LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "")
+# TRANSCRIBE_PROVIDER: "mock" or "openai" = any OpenAI-compatible /audio/transcriptions API:
+# speaches (local faster-whisper) or OpenAI itself when hosted.
 TRANSCRIBE_PROVIDER = os.environ.get("TRANSCRIBE_PROVIDER", "mock")
 TRANSCRIBE_API_KEY = os.environ.get("TRANSCRIBE_API_KEY", "")
 TRANSCRIBE_MODEL = os.environ.get("TRANSCRIBE_MODEL", "")
+TRANSCRIBE_BASE_URL = os.environ.get("TRANSCRIBE_BASE_URL", "").rstrip("/")
+TRANSCRIBE_TIMEOUT_SECONDS = int(os.environ.get("TRANSCRIBE_TIMEOUT_SECONDS", "600"))
+# speaches-only: skip silence before transcribing (faster, and Whisper doesn't "hear" words in silence).
+# OpenAI's API doesn't know this field, so keep it off there.
+TRANSCRIBE_VAD_FILTER = os.environ.get("TRANSCRIBE_VAD_FILTER", "false").lower() == "true"
+
+# Local LLM and Whisper share one small GPU: when true, every GPU call takes a lock in Redis and the
+# local LLM (Ollama) is unloaded before transcribing. Keep false for hosted APIs.
+SHARED_GPU = os.environ.get("SHARED_GPU", "false").lower() == "true"
 
 # limits
 MAX_FILES_PER_SET = int(os.environ.get("MAX_FILES_PER_SET", "5"))
