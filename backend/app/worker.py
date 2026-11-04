@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import tempfile
+import time
 
 import httpx
 from celery import Celery
@@ -12,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from app import config, storage
 from app.ai import generate
 from app.ai.extract import ProcessingError, extract_text, split_into_blocks
+from app.ai.prompts import detect_language
 from app.ai.transcribe import transcribe
 from app.db import SessionLocal
 from app.models import Chapter, Question, StudySet, Topic
@@ -23,6 +25,7 @@ celery.conf.broker_connection_retry_on_startup = True
 
 MIN_INPUT_CHARS = 500
 GENERIC_ERROR = "Something went wrong while processing this study set. Please try again."
+UNREACHABLE_ERROR = "The AI service could not be reached or took too long to answer. Please try again later."
 
 
 @celery.task
@@ -70,7 +73,12 @@ def process_study_set(self, study_set_id: int):
                 set_status(db, study_set, study_set.status, "The AI service had a hiccup, retrying…")
                 raise  # autoretry_for re-queues the task with backoff
             log.exception("Processing study set %s failed", study_set_id)
-            study_set.error = str(exc) if isinstance(exc, ProcessingError) else GENERIC_ERROR
+            if isinstance(exc, ProcessingError):
+                study_set.error = str(exc)
+            elif isinstance(exc, httpx.HTTPError):
+                study_set.error = UNREACHABLE_ERROR
+            else:
+                study_set.error = GENERIC_ERROR
             set_status(db, study_set, "failed")
 
 
@@ -87,7 +95,10 @@ def generate_replacement_question(self, topic_id: int):
         previous = topic.questions  # ordered by id, so the last one is the most recent
 
         try:
-            new = generate.replacement_question(topic.chapter.content, topic.name, [q.prompt for q in previous])
+            language = detect_language(topic.chapter.study_set.source_text)
+            new = generate.replacement_question(
+                topic.chapter.content, topic.name, [q.prompt for q in previous], language
+            )
             prompt, explanation = new.question, new.explanation
             options, correct_index = shuffle_options(new.options, new.correct_index)
         except Exception as exc:
@@ -111,6 +122,7 @@ def generate_replacement_question(self, topic_id: int):
 
 
 def run_pipeline(db, study_set: StudySet) -> None:
+    started = time.monotonic()
     # Idempotent: a retry starts from a clean slate.
     db.execute(delete(Chapter).where(Chapter.study_set_id == study_set.id))
     study_set.error = None
@@ -158,11 +170,12 @@ def run_pipeline(db, study_set: StudySet) -> None:
         study_set.title = structure.title
     study_set.overview = structure.overview
 
+    language = detect_language(source_text)  # the whole set's language, passed to every chapter
     total = len(structure.chapters)
     for position, span in enumerate(structure.chapters, start=1):
         set_status(db, study_set, "generating", f"Generating chapter {position} of {total}")
         content = "\n\n".join(blocks[span.start_block : span.end_block + 1])
-        materials = generate.chapter_materials(span.title, content)
+        materials = generate.chapter_materials(span.title, content, language)
 
         chapter = Chapter(
             study_set_id=study_set.id,
@@ -187,3 +200,4 @@ def run_pipeline(db, study_set: StudySet) -> None:
         db.commit()
 
     set_status(db, study_set, "ready")
+    log.info("Study set %s ready: %d chapters in %.0fs", study_set.id, total, time.monotonic() - started)

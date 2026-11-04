@@ -44,8 +44,14 @@ services:
 
   worker:
     build: ./backend
-    command: celery -A app.worker worker --loglevel=info
+    # Two tasks at a time (as on Railway): one study set can process while a replacement question is
+    # generated. More would only queue up in a local Ollama that handles one request at a time.
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
     env_file: .env
+    # Lets the worker reach Ollama running on the host machine. Docker Desktop (Windows/macOS) knows
+    # this name already; the line is needed on Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
       - uploads:/data/uploads

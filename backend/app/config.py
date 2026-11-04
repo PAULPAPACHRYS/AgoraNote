@@ -28,10 +28,17 @@ R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET = os.environ.get("R2_BUCKET", "")
 
 # AI
+# LLM_PROVIDER: "mock" (offline, for development and tests) or "openai" = any OpenAI-compatible
+# Chat Completions API: Ollama's /v1 endpoint locally, OpenAI or OpenRouter when hosted.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "")
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "").rstrip("/")
+# Local models are slow: allow minutes per call, not seconds.
+LLM_TIMEOUT_SECONDS = int(os.environ.get("LLM_TIMEOUT_SECONDS", "600"))
+# Sent as "reasoning_effort" when set. "none" switches off a model's hidden thinking (much faster on
+# Ollama); leave empty for models/providers that don't accept the field.
+LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "")
 TRANSCRIBE_PROVIDER = os.environ.get("TRANSCRIBE_PROVIDER", "mock")
 TRANSCRIBE_API_KEY = os.environ.get("TRANSCRIBE_API_KEY", "")
 TRANSCRIBE_MODEL = os.environ.get("TRANSCRIBE_MODEL", "")

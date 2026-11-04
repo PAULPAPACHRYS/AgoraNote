@@ -204,14 +204,12 @@ class ChapterOut(BaseModel):
     key_concepts: list[KeyConcept] = Field(min_length=1)
     qa_pairs: list[QAPair] = Field(min_length=1)
     study_aids: StudyAids
-    quiz: list[QuizItem]
+    # Each quiz item becomes a scoring slot (topic), so the count and distinct topics matter.
+    quiz: list[QuizItem] = Field(min_length=config.QUESTIONS_PER_CHAPTER, max_length=config.QUESTIONS_PER_CHAPTER)
 
     @field_validator("quiz")
     @classmethod
     def one_item_per_topic(cls, quiz: list[QuizItem]) -> list[QuizItem]:
-        # Each quiz item becomes a scoring slot (topic), so the count and distinct topics matter.
-        if len(quiz) != config.QUESTIONS_PER_CHAPTER:
-            raise ValueError(f"quiz must have exactly {config.QUESTIONS_PER_CHAPTER} items")
         if len({item.topic.strip().casefold() for item in quiz}) != len(quiz):
             raise ValueError("every quiz item must cover a different topic")
         return quiz
@@ -238,3 +236,51 @@ class ChapterDetail(BaseModel):
     study_aids: StudyAids
     prev_chapter: ChapterLinkOut | None
     next_chapter: ChapterLinkOut | None
+
+
+# --- What the LLM actually writes ----------------------------------------------------------------
+# Small models often point correct_index at the wrong option, so the LLM writes the correct answer
+# and the wrong answers separately, and the code builds options + correct_index from them (the worker
+# shuffles the options afterwards).
+
+class QuestionDraft(BaseModel):
+    question: str = Field(min_length=1)
+    correct_answer: str = Field(min_length=1)
+    explanation: str = Field(min_length=1)
+    wrong_answers: list[str] = Field(min_length=3, max_length=3)
+
+    @model_validator(mode="after")
+    def answers_all_different(self):
+        _four_distinct_options([self.correct_answer, *self.wrong_answers])
+        return self
+
+    @field_validator("question")
+    @classmethod
+    def is_a_question(cls, question: str) -> str:
+        # Small models sometimes write a topic label ("Vector length") instead of a question.
+        # "?" or the Greek question mark (";" or U+037E).
+        if not question.strip().endswith(("?", ";", ";")):
+            raise ValueError("must be a complete question ending with a question mark")
+        return question
+
+    def to_question(self) -> QuestionOut:
+        return QuestionOut(
+            question=self.question,
+            options=[self.correct_answer, *self.wrong_answers],
+            correct_index=0,
+            explanation=self.explanation,
+        )
+
+
+class QuizItemDraft(QuestionDraft):
+    topic: str = Field(min_length=1)
+
+
+class ChapterDraft(ChapterOut):
+    quiz: list[QuizItemDraft] = Field(
+        min_length=config.QUESTIONS_PER_CHAPTER, max_length=config.QUESTIONS_PER_CHAPTER
+    )
+
+    def to_chapter(self) -> ChapterOut:
+        quiz = [QuizItem(topic=item.topic, **item.to_question().model_dump()) for item in self.quiz]
+        return ChapterOut(**self.model_dump(exclude={"quiz"}), quiz=quiz)

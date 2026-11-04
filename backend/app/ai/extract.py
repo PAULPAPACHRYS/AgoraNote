@@ -1,5 +1,6 @@
 """Getting plain text out of uploaded files, and cutting it into blocks for the LLM."""
 import re
+from collections import Counter
 
 import docx
 import pypdf
@@ -31,6 +32,30 @@ def extract_text(path: str, filename: str) -> str:
     raise ProcessingError(f'"{filename}" is not a text document.')
 
 
+def _line_key(line: str) -> str:
+    # Numbers become "#" so "Page 3 of 30" and "Page 4 of 30" count as the same line.
+    return re.sub(r"\d+", "#", " ".join(line.split()))
+
+
+def strip_repeated_lines(pages: list[str]) -> list[str]:
+    """Remove page headers and footers: lines found on at least half of the pages, and bare page numbers.
+
+    Slides repeat the course code, date or lecturer's name on every page; left in, they end up in
+    chapter titles and summaries.
+    """
+    if len(pages) < 3:
+        return pages
+    counts = Counter(key for page in pages for key in {_line_key(line) for line in page.splitlines() if line.strip()})
+    repeated = {key for key, n in counts.items() if n >= len(pages) / 2}
+    return [
+        "\n".join(
+            line for line in page.splitlines()
+            if _line_key(line) not in repeated and not line.strip().isdigit()
+        )
+        for page in pages
+    ]
+
+
 def _pdf_text(path: str, filename: str) -> str:
     try:
         reader = pypdf.PdfReader(path)
@@ -39,7 +64,7 @@ def _pdf_text(path: str, filename: str) -> str:
         raise ProcessingError(f'"{filename}" is password-protected. Please upload an unprotected PDF.')
     except PyPdfError:
         raise ProcessingError(f'"{filename}" could not be read. Is it a valid PDF?')
-    text = "\n\n".join(pages)
+    text = "\n\n".join(strip_repeated_lines(pages))
     # Scanned PDFs are just images: pypdf finds (almost) no text in them.
     if len(text.strip()) < 20 * max(1, len(pages)):
         raise ProcessingError(

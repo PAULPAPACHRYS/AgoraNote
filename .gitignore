@@ -16,3 +16,6 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# sample lectures used for prompt tuning (real course material: keep out of git)
+samples/
