@@ -141,6 +141,7 @@ def test_first_segment_decides_the_language(monkeypatch, tmp_path):
     calls = []
 
     def fake_segment(path, language=None):
+        """Stands in for the real HTTP call; records which language each segment was sent with."""
         calls.append((path, language))
         return f"text of {path}", "en" if path == "s2" else "el"  # s2 would be mis-detected
 

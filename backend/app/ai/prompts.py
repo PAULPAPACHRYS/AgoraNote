@@ -1,7 +1,15 @@
-"""Prompt templates for every LLM step. Tuned on real Greek and English lectures (Phase 6).
+"""
+Prompt templates for every LLM step, tuned on real Greek and English lectures
 
-Small local models follow short, concrete rules best, and follow what comes last most closely, so the
-language instruction is repeated at the end of every user message.
+Small local models follow short, concrete rules best, and follow what comes last most closely, 
+so the language instruction is repeated at the end of every user message
+
+Every LLM call has 2 messages:
+- a *system* message (the constants *_SYSTEM below): the task, the rules and the JSON contract
+- a *user* message (built by the *_user() functions): the actual material for this call
+
+JSON contracts shown to the model match the Pydantic models in schemas.py; the provider also
+receives those models as a JSON Schema, so the shape is enforced, not just described
 """
 import re
 
@@ -9,6 +17,7 @@ from pydantic import ValidationError
 
 from app import config
 
+#rules shared by every prompt
 RULES = """Rules:
 - Use ONLY the material provided. Do not add outside facts.
 - The text was extracted from slides or documents: ignore repeated headers, footers, page numbers,
@@ -16,6 +25,7 @@ RULES = """Rules:
 - All strings are plain text: no Markdown, no HTML, no bullet characters.
 - Reply with a single JSON object that matches the contract exactly, and nothing else."""
 
+# rules for writing multiple-choice questions (chapter quizzes and replacement questions)
 QUIZ_RULES = """Quiz questions:
 - Ask about the ideas of the subject (definitions, properties, causes, how and why), not about course
   administration (schedules, instructors, grading, room numbers) and not about exact wording.
@@ -32,6 +42,8 @@ QUIZ_RULES = """Quiz questions:
 - explanation: 1-3 sentences on why the correct answer is right, based on the material."""
 
 
+# step "structuring": group the numbered blocks into chapters
+#(In these f-strings, {{ and }} areliteral braces in the JSON example, {RULES} inserts the rules above)
 STRUCTURE_SYSTEM = f"""You organise study material into chapters.
 The material is cut into numbered blocks of about 1,000 characters; you see the beginning of each block.
 Group consecutive blocks into chapters (the user message says how many to aim for, at most 10). Each
@@ -50,29 +62,34 @@ JSON contract:
 }}"""
 
 
-# The structure step sees only the beginning of each block. That is enough to find topic boundaries,
-# keeps block numbers easy to follow for a small model (with the full text it mixed them up with slide
-# numbers), and always fits the context window: 18,000 characters is ~8k tokens even in Greek (~2.3
-# characters per token), leaving room in a 16k window for instructions and the reply.
+'''
+The structure step sees only the beginning of each block. That is enough to find topic boundaries,
+keeps block numbers easy to follow for a small model (with the full text it mixed them up with slide
+numbers), and always fits the context window: 18,000 characters is ~8k tokens even in Greek (~2.3
+characters per token), leaving room in a 16k window for instructions and the reply
+'''
 PREVIEW_BUDGET_CHARS = 18_000
 PREVIEW_MAX_CHARS = 300
 PREVIEW_MIN_CHARS = 80
 
 
-# About one chapter per 5 blocks (~5,000 characters), so each chapter gets its own 5-question quiz.
-# Small models ignore vague size hints but follow an explicit number.
+# about one chapter per 5 blocks (~5,000 characters), so each chapter gets its own 5-question quiz
+# small models ignore vague size hints but follow an explicit number
 BLOCKS_PER_CHAPTER = 5
 
 
 def target_chapters(n_blocks: int) -> int:
+    #how many chapters to ask for: one per BLOCKS_PER_CHAPTER blocks, between 1 and 10
     return max(1, min(10, round(n_blocks / BLOCKS_PER_CHAPTER)))
 
 
 def structure_user(blocks: list[str]) -> str:
+    #structuring step's user message: one line per block ("Block 7: first ~300 characters…")
+    # characters per preview: as many as fit the budget, but between 80 and 300
     size = max(PREVIEW_MIN_CHARS, min(PREVIEW_MAX_CHARS, PREVIEW_BUDGET_CHARS // len(blocks)))
     previews = []
     for i, block in enumerate(blocks):
-        text = " ".join(block.split())
+        text = " ".join(block.split())  # one line: newlines and repeated spaces become single spaces
         previews.append(f"Block {i}: {text[:size]}{'…' if len(text) > size else ''}")
     return (
         f"The material has {len(blocks)} blocks, numbered 0 to {len(blocks) - 1}.\n\n"
@@ -82,6 +99,7 @@ def structure_user(blocks: list[str]) -> str:
     )
 
 
+# step "generating": all study materials and the quiz of one chapter
 CHAPTER_SYSTEM = f"""You write study materials for one chapter of a lecture.
 
 Produce:
@@ -115,9 +133,11 @@ JSON contract:
 
 
 def chapter_user(title: str, text: str, language: str | None) -> str:
+    #the chapter step's user message: the chapter's title and full text, then the language rule
     return f"Chapter title: {title}\n\nChapter text:\n{text}\n\n{language_instruction(text, language)}"
 
 
+# after a wrong answer: one new question on the same topic
 REPLACEMENT_SYSTEM = f"""You write one new multiple-choice question on a given topic of a lecture chapter.
 
 {RULES}
@@ -131,6 +151,7 @@ JSON contract:
 
 
 def replacement_user(chapter_text: str, topic: str, previous: list[str], language: str | None) -> str:
+    #replacement step's user message: the topic, the questions to avoid, and the chapter text
     listed = "\n".join(f"- {p}" for p in previous) or "- (none)"
     return (
         f"Topic: {topic}\n\n"
@@ -142,19 +163,21 @@ def replacement_user(chapter_text: str, topic: str, previous: list[str], languag
 # --- language -----------------------------------------------------------------------------------
 
 _GREEK = re.compile(r"[Ͱ-Ͽἀ-῿]")
+# Greek and Coptic + Greek Extended (accented letters) Unicode blocks, and "any letter of any script"
 _LETTER = re.compile(r"[^\W\d_]")
 
 
 def detect_language(text: str) -> str | None:
-    """'Greek' when a good share of the letters are Greek, else None (= "the material's language").
-
-    Greek lectures are full of English terms, formulas and code, so 30% Greek letters is plenty.
+    """
+    'Greek' when a good share of the letters are Greek, else None (= "the material's language")
+    Greek lectures are full of English terms, formulas and code, so 30% Greek letters is plenty
     """
     letters = len(_LETTER.findall(text))
     return "Greek" if letters and len(_GREEK.findall(text)) / letters >= 0.3 else None
 
 
 def language_instruction(text: str, language: str | None = None) -> str:
+    # "write in <language>" line that ends every user message. `language` wins if given
     language = language or detect_language(text)
     if language:
         return (
@@ -165,9 +188,9 @@ def language_instruction(text: str, language: str | None = None) -> str:
 
 
 def fix_request(error: Exception) -> str:
-    """Appended to the prompt when the model's reply didn't match the contract."""
+    #appended to the prompt when the model's reply didn't match the contract
     if isinstance(error, ValidationError):
-        # Just "where: what" for each problem; str(error) would echo the whole reply back.
+        # just "where: what" for each problem; str(error) would echo the whole reply back
         problems = "; ".join(
             f"{'.'.join(str(p) for p in e['loc']) or 'reply'}: {e['msg']}" for e in error.errors()
         )

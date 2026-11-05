@@ -39,8 +39,12 @@ def _create_test_database():
     admin.dispose()
 
 
+# Fixtures are pytest's setup helpers: a test names a fixture as a parameter (e.g. `client`) and gets
+# its value. autouse=True fixtures run for every test without being named; scope="session" ones only
+# once per test run.
 @pytest.fixture(scope="session", autouse=True)
 def database():
+    """Create the test database once, with tables matching the current models."""
     assert config.DATABASE_URL.endswith("/agoranote_test"), "tests must never touch the dev database"
     _create_test_database()
     Base.metadata.drop_all(engine)  # start from the current schema every run
@@ -60,5 +64,6 @@ def clean_tables():
 
 @pytest.fixture
 def client():
+    """A test HTTP client that calls the FastAPI app directly (no real server or network needed)."""
     with TestClient(app) as c:
         yield c

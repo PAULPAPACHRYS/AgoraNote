@@ -1,3 +1,6 @@
+// Chapter.jsx: one chapter ("/sets/:id/chapters/:chapterId") with five tabs:
+// Summary, Key concepts, Q&A practice (flashcards), Study aids and Quiz (or a "locked" notice).
+// The active tab is kept in the URL (?tab=quiz), so a link can open a chapter on a specific tab.
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
@@ -5,6 +8,7 @@ import { api } from "../api.js";
 import Flashcards from "../components/Flashcards.jsx";
 import Quiz from "../components/Quiz.jsx";
 
+// The tabs in display order: `id` is what appears in ?tab=, `label` is the button text.
 const TABS = [
   { id: "summary", label: "Summary" },
   { id: "concepts", label: "Key concepts" },
@@ -13,6 +17,7 @@ const TABS = [
   { id: "quiz", label: "Quiz" },
 ];
 
+// Shown on the Quiz tab while this chapter's quiz is locked: what to do to unlock it.
 function QuizLocked({ chapter }) {
   return (
     <div className="locked">
@@ -32,6 +37,8 @@ function QuizLocked({ chapter }) {
   );
 }
 
+// "Summary" tab: the summary paragraphs.
+// (key={i}: React needs a key per list item; the index is fine for lists that never reorder.)
 function Summary({ paragraphs }) {
   return (
     <div className="prose">
@@ -42,6 +49,7 @@ function Summary({ paragraphs }) {
   );
 }
 
+// "Key concepts" tab: a definition list of term + explanation.
 function KeyConcepts({ concepts }) {
   return (
     <dl className="concepts">
@@ -55,9 +63,10 @@ function KeyConcepts({ concepts }) {
   );
 }
 
+// "Study aids" tab: the outline, a review checklist with tick boxes, and memory tips.
 function StudyAids({ aids }) {
   // Ticks are only for this visit; they aren't saved anywhere.
-  const [checked, setChecked] = useState({});
+  const [checked, setChecked] = useState({}); // item index -> ticked?
 
   return (
     <div className="study-aids">
@@ -107,6 +116,7 @@ function StudyAids({ aids }) {
 
 export default function Chapter() {
   const { chapterId } = useParams();
+  // searchParams = the ?tab=... part of the URL; setSearchParams changes it (and so the tab).
   const [searchParams, setSearchParams] = useSearchParams();
   const [chapter, setChapter] = useState(null);
   const [error, setError] = useState("");
@@ -114,6 +124,7 @@ export default function Chapter() {
   // The active tab lives in ?tab= so it can be linked to.
   const tab = TABS.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab") : "summary";
 
+  // Load the chapter whenever the chapter in the URL changes (also via the prev/next links).
   useEffect(() => {
     setChapter(null);
     setError("");
@@ -133,6 +144,7 @@ export default function Chapter() {
   if (!chapter) return <p className="muted">Loading…</p>;
 
   const setUrl = `/sets/${chapter.study_set_id}`;
+  // Previous/next chapter links open the same tab the user is on now.
   const chapterUrl = (other) => `${setUrl}/chapters/${other.id}?tab=${tab}`;
 
   return (
@@ -161,6 +173,8 @@ export default function Chapter() {
       </div>
 
       <div className="tab-panel" role="tabpanel">
+        {/* Only the active tab is rendered. key={chapter.id} gives each chapter fresh flashcard and
+            checklist state instead of carrying it over from the previous chapter. */}
         {tab === "summary" && <Summary paragraphs={chapter.summary} />}
         {tab === "concepts" && <KeyConcepts concepts={chapter.key_concepts} />}
         {tab === "practice" && <Flashcards key={chapter.id} cards={chapter.qa_pairs} />}

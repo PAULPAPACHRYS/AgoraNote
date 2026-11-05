@@ -1,3 +1,10 @@
+// Quiz.jsx: the "Quiz" tab of a chapter.
+//
+// How it works: load the quiz state (every topic and its current question) -> show one question ->
+// on a click, send the answer to the server, which grades it -> show the feedback (correct answer,
+// explanation, points) -> "Next question" reloads the state and shows the next open topic.
+// A wrong answer makes the server prepare a new question on that topic in the background; when no
+// question is available yet, the quiz shows "Preparing your next question…" and checks every 2 s.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -16,13 +23,14 @@ function pickNext(topics, lastTopicId) {
 }
 
 export default function Quiz({ chapter }) {
-  const [quiz, setQuiz] = useState(null);
+  const [quiz, setQuiz] = useState(null); // the quiz state from GET /api/chapters/{id}/quiz
   const [error, setError] = useState("");
-  const [lastTopicId, setLastTopicId] = useState(null);
+  const [lastTopicId, setLastTopicId] = useState(null); // the topic answered last
   const [answered, setAnswered] = useState(null); // { topic, selected, result } until "Next question"
   const [submitting, setSubmitting] = useState(false);
   const [unlocked, setUnlocked] = useState(null); // the chapter this quiz just unlocked
 
+  // (Re)load the quiz state from the server.
   function load() {
     return api(`/api/chapters/${chapter.id}/quiz`)
       .then(setQuiz)
@@ -33,7 +41,10 @@ export default function Quiz({ chapter }) {
     load();
   }, [chapter.id]);
 
+  // These are worked out on every render from the state above:
+  // the topic on screen (the answered one while its feedback shows, else the next open one),
   const current = answered ? answered.topic : quiz && pickNext(quiz.topics, lastTopicId);
+  // whether the chapter is finished, and whether we are waiting for a replacement question.
   const allMastered = quiz && quiz.topics.every((t) => t.mastered);
   const waiting = quiz && !current && !allMastered;
 
@@ -44,6 +55,7 @@ export default function Quiz({ chapter }) {
     return () => clearInterval(timer);
   }, [waiting]);
 
+  // An option was clicked: send it to the server, which grades it.
   async function choose(index) {
     setError("");
     setSubmitting(true);
@@ -54,6 +66,7 @@ export default function Quiz({ chapter }) {
       });
       setAnswered({ topic: current, selected: index, result });
       setLastTopicId(current.id);
+      // Update the points bars right away with the new totals from the answer.
       setQuiz({ ...quiz, ...result.chapter, progress: result.progress });
       if (result.unlocked_chapter) setUnlocked(result.unlocked_chapter);
     } catch (err) {
@@ -63,6 +76,7 @@ export default function Quiz({ chapter }) {
     setSubmitting(false);
   }
 
+  // "Next question": leave the feedback and fetch fresh state (a replacement may be ready by now).
   function next() {
     setError("");
     setAnswered(null);
@@ -113,6 +127,7 @@ export default function Quiz({ chapter }) {
           <h2 className="question-prompt">{current.question.prompt}</h2>
           <div className="options">
             {current.question.options.map((option, i) => {
+              // After answering: the correct option turns green, a wrong pick red.
               let state = "";
               if (answered) {
                 if (i === answered.result.correct_index) state = "correct";

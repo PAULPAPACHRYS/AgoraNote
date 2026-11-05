@@ -1,3 +1,16 @@
+/*
+ * styles.css: all styling of the app in one plain CSS file (no CSS framework).
+ *
+ * Structure:
+ * - :root holds the design tokens as CSS variables (colours, radius, font). Change a colour here and
+ *   it changes everywhere it is used as var(--name).
+ * - Then general element styles, followed by one section per part of the app (Layout, Buttons,
+ *   Dashboard, Forms, Study set, Progress bars, Chapter, Quiz, Search).
+ * - The @media rule at the end switches to a single column on narrow screens (phones).
+ * Class names match the className="..." attributes in the components.
+ */
+
+/* Design tokens */
 :root {
   --bg: #f7f7f4;
   --surface: #ffffff;

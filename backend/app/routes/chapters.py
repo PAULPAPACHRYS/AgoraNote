@@ -1,3 +1,9 @@
+"""
+Chapter page's data: GET /api/chapters/{id}
+Returns one chapter's study materials (summary, key concepts, Q&A flashcards, study aids), 
+its quiz points and lock state, and links to the previous/next chapter
+The quiz itself has its own endpoints (see quiz.py)
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,7 +18,11 @@ router = APIRouter(prefix="/api/chapters")
 
 
 def get_owned_chapter(db: Session, user: User, chapter_id: int) -> Chapter:
-    """The chapter if its study set belongs to this user; 404 otherwise."""
+    """
+    the chapter if its study set belongs to this user else 404
+    chapters have no user_id of their own, so the query joins the chapter's study set and checks its owner
+    someone else's chapter gives the same 404 as a chapter that doesn't exist
+    """
     chapter = db.scalar(
         select(Chapter).join(StudySet).where(Chapter.id == chapter_id, StudySet.user_id == user.id)
     )
@@ -22,14 +32,17 @@ def get_owned_chapter(db: Session, user: User, chapter_id: int) -> Chapter:
 
 
 def _link(chapter: Chapter | None) -> dict | None:
+    #{"id", "title"} for a previous/next chapter link, or None when there is none
     return {"id": chapter.id, "title": chapter.title} if chapter else None
 
 
 @router.get("/{chapter_id}", response_model=ChapterDetail)
 def get_chapter(chapter_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # one chapter with its materials, points and lock state (see schemas.ChapterDetail)
     chapter = get_owned_chapter(db, user, chapter_id)
     siblings = chapter.study_set.chapters  # ordered by position
     index = siblings.index(chapter)
+    #points and locks depend on the whole set (a chapter unlocks through the previous one)
     scores = load_chapter_scores(db, chapter.study_set_id)
     score = next(s for s in scores if s["id"] == chapter.id)
     return {

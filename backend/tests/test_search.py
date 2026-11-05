@@ -13,12 +13,14 @@ GREEK = """Η φωτοσύνθεση είναι η διαδικασία με τ�
 
 
 def create_set(client, title, text):
+    """Upload text as a study set (processed inline with the mock AI) and return its detail."""
     response = client.post("/api/study-sets", data={"title": title, "text": text})
     assert response.status_code == 201
     return client.get(f"/api/study-sets/{response.json()['id']}").json()
 
 
 def search(client, q):
+    """GET /api/search and return the list of results."""
     response = client.get("/api/search", params={"q": q})
     assert response.status_code == 200
     return response.json()

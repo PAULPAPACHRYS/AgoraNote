@@ -1,3 +1,5 @@
+// ChapterList.jsx: the chapter list on the study set page. Every row links to the chapter and shows
+// its points bar (with the unlock threshold marked), and a lock note or a "complete" mark.
 import { Link } from "react-router-dom";
 
 import ProgressBar from "./ProgressBar.jsx";
@@ -7,6 +9,7 @@ export default function ChapterList({ setId, chapters }) {
   return (
     <ol className="chapter-list">
       {chapters.map((chapter, i) => {
+        // The chapter before this one: its points decide whether this chapter's quiz is open.
         const previous = chapters[i - 1];
         return (
           <li key={chapter.id}>

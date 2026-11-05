@@ -37,6 +37,7 @@ def study_set(client):
 
 
 def quiz(client, chapter_id):
+    """GET a chapter's quiz state and check it worked."""
     response = client.get(f"/api/chapters/{chapter_id}/quiz")
     assert response.status_code == 200, response.json()
     return response.json()
@@ -49,6 +50,7 @@ def correct_index(question_id):
 
 
 def answer(client, question_id, selected_index):
+    """POST an answer; returns the raw response so tests can check the status code."""
     return client.post(f"/api/questions/{question_id}/answer", json={"selected_index": selected_index})
 
 

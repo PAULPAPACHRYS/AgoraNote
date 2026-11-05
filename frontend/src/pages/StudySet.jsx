@@ -1,3 +1,6 @@
+// StudySet.jsx: one study set ("/sets/:id").
+// While the set is processed it shows the live status (polled every 3 s); when it failed, the error
+// and a Retry button; when ready, the overview, the overall points and the chapter list.
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -6,20 +9,21 @@ import ChapterList from "../components/ChapterList.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
 import { setTitle, statusLabel } from "../status.js";
 
-const POLL_MS = 3000;
+const POLL_MS = 3000; // how often to ask for the status while processing
 
+// No more polling needed once processing has ended, successfully or not.
 function isFinished(status) {
   return status === "ready" || status === "failed";
 }
 
 export default function StudySet() {
-  const { id } = useParams();
+  const { id } = useParams(); // the :id part of the URL
   const navigate = useNavigate();
   const [studySet, setStudySet] = useState(null);
   const [error, setError] = useState("");
   const [pollKey, setPollKey] = useState(0); // bumped by Retry to start polling again
   const [retrying, setRetrying] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false); // two-step delete: ask first
   const [deleting, setDeleting] = useState(false);
 
   // Load the set, then keep polling while it is being processed.
@@ -36,9 +40,11 @@ export default function StudySet() {
     }
     load();
     timer = setInterval(load, POLL_MS);
+    // React calls this cleanup when the page closes (or id/pollKey change): stop the timer.
     return () => clearInterval(timer);
   }, [id, pollKey]);
 
+  // Retry: the server resets the set to "queued" and starts processing again; polling restarts.
   async function handleRetry() {
     setRetrying(true);
     try {
@@ -50,6 +56,7 @@ export default function StudySet() {
     setRetrying(false);
   }
 
+  // Second step of deleting (after "Delete study set" -> "Yes, delete"); then back to the dashboard.
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -61,6 +68,7 @@ export default function StudySet() {
     }
   }
 
+  // Couldn't load at all (e.g. the set doesn't exist): show only the error.
   if (error && !studySet) {
     return (
       <section>

@@ -1,10 +1,12 @@
+// App.jsx: the layout around every page: the header (app name + search box) and the page itself.
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 export default function App() {
+  // navigate(url) changes the page from code; location is the current URL.
   const navigate = useNavigate();
   const location = useLocation();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(""); // what is typed in the search box
 
   // On the results page, keep the box showing what was searched for.
   useEffect(() => {
@@ -13,8 +15,9 @@ export default function App() {
     }
   }, [location]);
 
+  // Enter in the search box: go to the results page (an empty search does nothing).
   function handleSearch(event) {
-    event.preventDefault();
+    event.preventDefault(); // stop the browser's default form submit (a full page reload)
     if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`);
   }
 

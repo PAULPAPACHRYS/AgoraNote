@@ -1,3 +1,6 @@
+// Search.jsx: the search results page ("/search?q=...").
+// The header's search box navigates here; this page asks the API and shows the matching chapters,
+// grouped by study set, each with a snippet in which the matched words are highlighted.
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -20,10 +23,12 @@ function groupBySet(results) {
 
 export default function Search() {
   const [searchParams] = useSearchParams();
-  const q = (searchParams.get("q") || "").trim();
+  const q = (searchParams.get("q") || "").trim(); // the search words from the URL
   const [results, setResults] = useState(null);
   const [error, setError] = useState("");
 
+  // Search again whenever the query in the URL changes. encodeURIComponent makes spaces, quotes and
+  // Greek letters safe to put in a URL.
   useEffect(() => {
     setResults(null);
     setError("");

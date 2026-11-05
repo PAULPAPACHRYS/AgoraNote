@@ -1,3 +1,8 @@
+// main.jsx: the entry point of the browser app (loaded by index.html).
+//
+// It defines the routes (which page is shown for which URL) and puts the app into the page.
+// Every page is a child of <App />, which draws the header and shows the current page in its
+// <Outlet />. `:id` and `:chapterId` are URL parameters, read in the pages with useParams().
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -24,6 +29,8 @@ const router = createBrowserRouter([
   },
 ]);
 
+// StrictMode is a development helper: it runs effects twice to reveal bugs (so in development you
+// may see each request twice in the network tab; production builds don't do that).
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <RouterProvider router={router} />

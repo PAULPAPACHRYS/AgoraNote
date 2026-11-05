@@ -1,9 +1,10 @@
+// Flashcards.jsx: the "Q&A practice" tab of a chapter.
 import { useEffect, useState } from "react";
 
 // Q&A practice: question on the front; click, tap or Space reveals the answer. No points here.
 export default function Flashcards({ cards }) {
-  const [index, setIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [index, setIndex] = useState(0); // which card is shown
+  const [revealed, setRevealed] = useState(false); // showing the answer side?
 
   // Space anywhere on the page flips the card. When a button has focus, the browser already
   // turns Space into a click on that button, so we leave those alone.
@@ -14,11 +15,13 @@ export default function Flashcards({ cards }) {
       setRevealed((r) => !r);
     }
     window.addEventListener("keydown", onKeyDown);
+    // Remove the listener again when the flashcards disappear (e.g. another tab is opened).
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   if (cards.length === 0) return <p className="muted">No practice questions for this chapter.</p>;
 
+  // Previous (-1) / next (+1) card; a new card always starts on the question side.
   function go(step) {
     setIndex((i) => i + step);
     setRevealed(false);

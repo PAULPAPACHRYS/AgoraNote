@@ -1,3 +1,4 @@
+// Dashboard.jsx: the home page ("/"): all of the user's study sets as cards, or a welcome text.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -6,9 +7,10 @@ import ProgressBar from "../components/ProgressBar.jsx";
 import { setTitle, statusLabel } from "../status.js";
 
 export default function Dashboard() {
-  const [sets, setSets] = useState(null);
+  const [sets, setSets] = useState(null); // null = still loading, [] = the user has no sets yet
   const [error, setError] = useState("");
 
+  // Load the list once when the page opens (the empty [] means "only on the first render").
   useEffect(() => {
     api("/api/study-sets")
       .then(setSets)
