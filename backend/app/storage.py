@@ -31,6 +31,22 @@ def download(key: str, dest_path: str) -> None:
     shutil.copyfile(_local_path(key), dest_path)
 
 
+def exists(key: str) -> bool:
+    #is something stored under this key?
+    return os.path.isfile(_local_path(key))
+
+
+def read_text(key: str) -> str:
+    #a stored text file's contents (used for saved transcripts)
+    with open(_local_path(key), encoding="utf-8") as f:
+        return f.read()
+
+
+def transcript_key(key: str) -> str:
+    #where a recording's transcript is saved: next to the upload, e.g. ".../1-lecture.mp4.transcript.txt"
+    return key + ".transcript.txt"
+
+
 def delete(key: str) -> None:
     #delete a stored file, a file that is already gone is not an error
     try:

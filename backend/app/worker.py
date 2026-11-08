@@ -16,6 +16,7 @@ Tasks:
 - generate_replacement_question(topic_id): after a wrong answer, a new question on the same topic
 - ping(): a trivial task to check that the worker is running
 """
+import io
 import logging
 import os
 import random
@@ -191,8 +192,8 @@ def run_pipeline(db, study_set: StudySet) -> None:
         local = {}  # position -> path of the local copy
         for f in files:
             local[f.position] = os.path.join(tmp, f"{f.position}-{os.path.basename(f.storage_key)}")
-            storage.download(f.storage_key, local[f.position])
             if f.kind == "text":
+                storage.download(f.storage_key, local[f.position])
                 try:
                     texts[f.position] = extract_text(local[f.position], f.original_filename)
                 except ProcessingError:
@@ -206,12 +207,21 @@ def run_pipeline(db, study_set: StudySet) -> None:
         for i, f in enumerate(audio, start=1):
             label = f"Transcribing recording {i} of {len(audio)}"
             set_status(db, study_set, "transcribing", label)
+            # A transcript saved by an earlier run (an automatic retry or the Retry button) is reused,
+            # so a recording is transcribed only once, however often processing is repeated.
+            transcript_key = storage.transcript_key(f.storage_key)
+            if storage.exists(transcript_key):
+                log.info("Using the saved transcript of %s", f.original_filename)
+                texts[f.position] = storage.read_text(transcript_key)
+                continue
+            storage.download(f.storage_key, local[f.position])  # recordings are only copied when needed
             texts[f.position] = transcribe(
                 local[f.position], f.original_filename,
                 on_progress=lambda part, parts: set_status(db, study_set, "transcribing", f"{label} (part {part} of {parts})"),
             )
             if not texts[f.position].strip():
                 raise ProcessingError(f'No speech was found in "{f.original_filename}".')
+            storage.save(transcript_key, io.BytesIO(texts[f.position].encode("utf-8")))
 
     # --- 3. combine and check the text ------------------------------------------------------------
     #join the files in upload order; with several files, a heading line marks where each starts

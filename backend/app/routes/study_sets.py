@@ -218,6 +218,8 @@ def delete_study_set(set_id: int, user: User = Depends(get_current_user), db: Se
     # delete a set with all its chapters, quizzes and stored files. 204 = done
     study_set = get_owned_set(db, user, set_id)
     keys = [f.storage_key for f in study_set.source_files]
+    # recordings may also have a saved transcript next to them (deleting a missing one is fine)
+    keys += [storage.transcript_key(f.storage_key) for f in study_set.source_files if f.kind == "audio"]
     db.delete(study_set)  # rows below it are removed by ON DELETE CASCADE
     db.commit()
     # files go after the commit: a leftover file is harmless, a row pointing at a missing file is not
