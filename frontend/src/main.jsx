@@ -6,8 +6,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { ClerkProvider } from "@clerk/react";
 
 import App from "./App.jsx";
+import { AUTH_MODE } from "./auth.js";
 import Chapter from "./pages/Chapter.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import NewStudySet from "./pages/NewStudySet.jsx";
@@ -29,10 +31,21 @@ const router = createBrowserRouter([
   },
 ]);
 
+const app = <RouterProvider router={router} />;
+
 // StrictMode is a development helper: it runs effects twice to reveal bugs (so in development you
 // may see each request twice in the network tab; production builds don't do that).
+// In Clerk mode the whole app sits inside ClerkProvider, which loads Clerk, keeps track of the signed-in
+// user and makes Clerk's components and hooks (used in App.jsx) work. The publishable key only
+// identifies our Clerk instance; it is not a secret. afterSignOutUrl: where to go after signing out.
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    {AUTH_MODE === "clerk" ? (
+      <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+        {app}
+      </ClerkProvider>
+    ) : (
+      app
+    )}
   </StrictMode>
 );

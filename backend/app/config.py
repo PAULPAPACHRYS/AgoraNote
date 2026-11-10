@@ -29,10 +29,15 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
 # --- auth -----------------------------------------------------------------------------------------
 
-# "dev" = no login yet, every request is one fixed development user (see auth.py)
+# "dev" = no login, every request is one fixed development user (see auth.py)
+# "clerk" = users sign in with Clerk; every request carries a Clerk session token that auth.py checks
 AUTH_MODE = os.environ.get("AUTH_MODE", "dev")
-AUTH_JWKS_URL = os.environ.get("AUTH_JWKS_URL", "")
-AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "")
+# The Clerk instance's "Frontend API URL", e.g. https://your-app.clerk.accounts.dev. Clerk writes it
+# into every token as the issuer ("iss"); tokens from any other issuer are rejected.
+AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "").rstrip("/")
+# Where Clerk publishes the public keys that token signatures are checked with. Clerk's standard
+# location is the Frontend API URL + /.well-known/jwks.json, so it can usually stay empty.
+AUTH_JWKS_URL = os.environ.get("AUTH_JWKS_URL", "") or (AUTH_ISSUER and f"{AUTH_ISSUER}/.well-known/jwks.json")
 
 # --- storage --------------------------------------------------------------------------------------
 

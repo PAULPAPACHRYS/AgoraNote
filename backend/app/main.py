@@ -25,6 +25,9 @@ from app.schemas import UserOut
 # dev auth trusts everyone as the same user, so it must never reach production ( will before deployment)
 if config.ENV == "production" and config.AUTH_MODE == "dev":
     raise RuntimeError("Refusing to start: AUTH_MODE=dev is not allowed when ENV=production.")
+# with Clerk, tokens can only be checked when we know which Clerk instance issues them
+if config.AUTH_MODE == "clerk" and not config.AUTH_ISSUER:
+    raise RuntimeError("Refusing to start: AUTH_MODE=clerk needs AUTH_ISSUER (the Clerk Frontend API URL).")
 
 
 @asynccontextmanager

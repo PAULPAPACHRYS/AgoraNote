@@ -106,6 +106,17 @@ a {
   color: inherit;
 }
 
+/* Clerk's user menu (avatar button) at the right end of the header */
+.user-menu {
+  display: flex;
+  align-items: center;
+}
+
+/* shown for a moment while Clerk starts */
+.loading-auth {
+  padding: 1.5rem;
+}
+
 .main {
   max-width: 960px;
   margin: 0 auto;
