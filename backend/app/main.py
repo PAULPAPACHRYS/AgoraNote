@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import config
+from app import config, storage
 from app.auth import get_current_user
 from app.db import engine
 from app.models import Base, User
@@ -28,6 +28,8 @@ if config.ENV == "production" and config.AUTH_MODE == "dev":
 # with Clerk, tokens can only be checked when we know which Clerk instance issues them
 if config.AUTH_MODE == "clerk" and not config.AUTH_ISSUER:
     raise RuntimeError("Refusing to start: AUTH_MODE=clerk needs AUTH_ISSUER (the Clerk Frontend API URL).")
+# storage settings that can't work (e.g. STORAGE_BACKEND=r2 without the R2 keys) stop the start too
+storage.check_settings()
 
 
 @asynccontextmanager

@@ -39,6 +39,9 @@ from app.models import Chapter, Question, StudySet, Topic
 log = logging.getLogger(__name__)
 
 # broker = where task messages are queued; backend = where task results are kept (both Redis)
+# the worker reads uploads from storage: stop at startup if its settings can't work
+storage.check_settings()
+
 celery = Celery("agoranote", broker=config.REDIS_URL, backend=config.REDIS_URL)
 celery.conf.broker_connection_retry_on_startup = True  # keep trying if Redis isn't up yet at start
 # two queues, each with its own worker (see docker-compose.yml): study sets are processed one at a
