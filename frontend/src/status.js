@@ -21,3 +21,9 @@ export function statusLabel(status) {
 export function setTitle(studySet) {
   return studySet.title || "Untitled study set";
 }
+
+// The lang attribute for a set's title: the material's language (e.g. "el"), but only for a real
+// title; the placeholder above is English like the rest of the interface. null = no lang attribute.
+export function titleLang(studySet) {
+  return studySet.title ? studySet.language : null;
+}

@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 
 // Q&A practice: question on the front; click, tap or Space reveals the answer. No points here.
-export default function Flashcards({ cards }) {
+// `lang` is the material's language: it goes on the card's text, not on the English labels.
+export default function Flashcards({ cards, lang }) {
   const [index, setIndex] = useState(0); // which card is shown
   const [revealed, setRevealed] = useState(false); // showing the answer side?
 
@@ -37,7 +38,7 @@ export default function Flashcards({ cards }) {
         onClick={() => setRevealed((r) => !r)}
       >
         <span className="flashcard-label">{revealed ? "Answer" : "Question"}</span>
-        <span className="flashcard-text">{revealed ? card.answer : card.question}</span>
+        <span className="flashcard-text" lang={lang}>{revealed ? card.answer : card.question}</span>
         <span className="flashcard-hint muted small">
           {revealed ? "Click or press Space to see the question" : "Click or press Space to reveal the answer"}
         </span>

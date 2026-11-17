@@ -31,7 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from app import config, storage
 from app.ai import generate
 from app.ai.extract import ProcessingError, extract_text, split_into_blocks
-from app.ai.prompts import detect_language
+from app.ai.prompts import detect_language, language_code
 from app.ai.transcribe import transcribe
 from app.db import SessionLocal
 from app.models import Chapter, Question, StudySet, Topic
@@ -249,6 +249,7 @@ def run_pipeline(db, study_set: StudySet) -> None:
     if not study_set.title:  # a title the user typed wins over the generated one
         study_set.title = structure.title
     study_set.overview = structure.overview
+    study_set.language = language_code(source_text, structure.language)  # for lang="..." in the frontend
 
     # --- 5. generating: the study materials of every chapter -------------------------------------
     language = detect_language(source_text)  # the whole set's language, passed to every chapter

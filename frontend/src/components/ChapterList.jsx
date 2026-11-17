@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 import ProgressBar from "./ProgressBar.jsx";
 
 // The ordered chapters of a study set, with each chapter's points and whether its quiz is open.
-export default function ChapterList({ setId, chapters }) {
+// `lang` is the material's language, for the (generated) chapter titles.
+export default function ChapterList({ setId, chapters, lang }) {
   return (
     <ol className="chapter-list">
       {chapters.map((chapter, i) => {
@@ -16,7 +17,7 @@ export default function ChapterList({ setId, chapters }) {
             <Link to={`/sets/${setId}/chapters/${chapter.id}`} className="chapter-row">
               <span className="chapter-number">{chapter.position}</span>
               <span className="chapter-body">
-                <span className="chapter-title">{chapter.title}</span>
+                <span className="chapter-title" lang={lang}>{chapter.title}</span>
                 <span className="chapter-points">
                   <ProgressBar
                     small

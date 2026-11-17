@@ -56,6 +56,7 @@ slide numbers that appear inside the text.
 
 JSON contract:
 {{
+  "language": "ISO 639-1 code of the material's main language: always 2 lowercase Latin letters such as en, el, fr, de (never the language's name)",
   "title": "Short title for the whole study set (2-8 words)",
   "overview": "3-5 sentence overview of the whole material",
   "chapters": [{{"title": "Short chapter title (2-6 words)", "start_block": 0, "end_block": 11}}]
@@ -174,6 +175,19 @@ def detect_language(text: str) -> str | None:
     """
     letters = len(_LETTER.findall(text))
     return "Greek" if letters and len(_GREEK.findall(text)) / letters >= 0.3 else None
+
+
+def language_code(text: str, suggested: str) -> str | None:
+    """
+    the study set's language code for lang="..." in the frontend (stored as StudySet.language)
+    - "el" whenever the Greek check fires: the small model sometimes answers "gr" (the country code)
+    - else the code the LLM suggested in the structure step, if it looks like an ISO 639-1 code
+    - else None: unknown, so the frontend leaves lang out rather than guess
+    """
+    if detect_language(text) == "Greek":
+        return "el"
+    code = suggested.strip().lower()
+    return code if re.fullmatch(r"[a-z]{2}", code) else None
 
 
 def language_instruction(text: str, language: str | None = None) -> str:

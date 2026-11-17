@@ -109,6 +109,8 @@ def structure(blocks: list[str]) -> StructureOut:
     ]
     return StructureOut.model_validate(
         {
+            # the mock always says English; prompts.language_code() turns Greek material into "el"
+            "language": "en",
             "title": _first_words(first_sentences[0], 8),
             "overview": " ".join(first_sentences[:3]),
             "chapters": chapters,

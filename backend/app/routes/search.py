@@ -48,6 +48,7 @@ def search(
         select(
             StudySet.id.label("study_set_id"),
             StudySet.title.label("study_set_title"),
+            StudySet.language.label("language"),
             Chapter.id.label("chapter_id"),
             Chapter.position.label("chapter_position"),
             Chapter.title.label("chapter_title"),

@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import ChapterList from "../components/ChapterList.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
-import { setTitle, statusLabel } from "../status.js";
+import { setTitle, statusLabel, titleLang } from "../status.js";
 
 const POLL_MS = 3000; // how often to ask for the status while processing
 
@@ -85,7 +85,7 @@ export default function StudySet() {
     <section>
       <p><Link to="/">← Your study sets</Link></p>
       <div className="page-head">
-        <h1>{setTitle(studySet)}</h1>
+        <h1 lang={titleLang(studySet)}>{setTitle(studySet)}</h1>
         <span className={`badge badge-${status}`}>{statusLabel(status)}</span>
       </div>
 
@@ -109,7 +109,8 @@ export default function StudySet() {
 
       {status === "ready" && (
         <>
-          {studySet.overview && <p className="overview">{studySet.overview}</p>}
+          {/* lang: the overview and chapter titles are in the material's language (e.g. "el") */}
+          {studySet.overview && <p className="overview" lang={studySet.language}>{studySet.overview}</p>}
           <div className="overall-progress">
             <ProgressBar value={studySet.progress.earned} max={studySet.progress.total} label="Overall progress" />
             <p>
@@ -120,7 +121,7 @@ export default function StudySet() {
             </p>
           </div>
           <h2>Chapters</h2>
-          <ChapterList setId={studySet.id} chapters={studySet.chapters} />
+          <ChapterList setId={studySet.id} chapters={studySet.chapters} lang={studySet.language} />
         </>
       )}
 

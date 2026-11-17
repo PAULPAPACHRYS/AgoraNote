@@ -1,6 +1,14 @@
 // Chapter.jsx: one chapter ("/sets/:id/chapters/:chapterId") with five tabs:
 // Summary, Key concepts, Q&A practice (flashcards), Study aids and Quiz (or a "locked" notice).
 // The active tab is kept in the URL (?tab=quiz), so a link can open a chapter on a specific tab.
+//
+// The tabs follow the WAI-ARIA "tabs" pattern (https://www.w3.org/WAI/ARIA/apg/patterns/tabs/):
+// only the active tab is in the Tab key order; the arrow keys move between tabs and open them
+// straight away, Home/End jump to the first/last tab. Every tab names its panel (aria-controls)
+// and every panel names its tab (aria-labelledby), so screen readers announce which tab is open.
+//
+// The interface is English, but the generated content is in the material's language: those
+// elements get lang={chapter.language} (e.g. "el") so screen readers pronounce them correctly.
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
@@ -39,9 +47,9 @@ function QuizLocked({ chapter }) {
 
 // "Summary" tab: the summary paragraphs.
 // (key={i}: React needs a key per list item; the index is fine for lists that never reorder.)
-function Summary({ paragraphs }) {
+function Summary({ paragraphs, lang }) {
   return (
-    <div className="prose">
+    <div className="prose" lang={lang}>
       {paragraphs.map((p, i) => (
         <p key={i}>{p}</p>
       ))}
@@ -50,9 +58,9 @@ function Summary({ paragraphs }) {
 }
 
 // "Key concepts" tab: a definition list of term + explanation.
-function KeyConcepts({ concepts }) {
+function KeyConcepts({ concepts, lang }) {
   return (
-    <dl className="concepts">
+    <dl className="concepts" lang={lang}>
       {concepts.map((c, i) => (
         <div key={i} className="concept">
           <dt>{c.term}</dt>
@@ -64,7 +72,8 @@ function KeyConcepts({ concepts }) {
 }
 
 // "Study aids" tab: the outline, a review checklist with tick boxes, and memory tips.
-function StudyAids({ aids }) {
+// The section headings are interface text (English); `lang` goes on the generated parts only.
+function StudyAids({ aids, lang }) {
   // Ticks are only for this visit; they aren't saved anywhere.
   const [checked, setChecked] = useState({}); // item index -> ticked?
 
@@ -73,7 +82,7 @@ function StudyAids({ aids }) {
       <section>
         <h2>Outline</h2>
         {aids.outline.map((section, i) => (
-          <div key={i} className="outline-section">
+          <div key={i} className="outline-section" lang={lang}>
             <h3>{section.heading}</h3>
             <ul>
               {section.points.map((point, j) => (
@@ -86,7 +95,7 @@ function StudyAids({ aids }) {
 
       <section>
         <h2>Review checklist</h2>
-        <ul className="checklist">
+        <ul className="checklist" lang={lang}>
           {aids.review_checklist.map((item, i) => (
             <li key={i}>
               <label>
@@ -104,7 +113,7 @@ function StudyAids({ aids }) {
 
       <section>
         <h2>Memory tips</h2>
-        <ul>
+        <ul lang={lang}>
           {aids.memory_tips.map((tip, i) => (
             <li key={i}>{tip}</li>
           ))}
@@ -146,54 +155,99 @@ export default function Chapter() {
   const setUrl = `/sets/${chapter.study_set_id}`;
   // Previous/next chapter links open the same tab the user is on now.
   const chapterUrl = (other) => `${setUrl}/chapters/${other.id}?tab=${tab}`;
+  const lang = chapter.language; // e.g. "el"; null = unknown (React then leaves the attribute out)
+
+  // Open a tab by putting it in the URL (replace: switching tabs doesn't add browser history).
+  function openTab(id) {
+    setSearchParams({ tab: id }, { replace: true });
+  }
+
+  // Keyboard support of the tab row: the arrow keys open the previous/next tab (wrapping around at
+  // the ends), Home/End the first/last one, and focus moves along to the tab that was opened.
+  function handleTabKeyDown(event) {
+    const index = TABS.findIndex((t) => t.id === tab);
+    const target = {
+      ArrowLeft: (index - 1 + TABS.length) % TABS.length,
+      ArrowRight: (index + 1) % TABS.length,
+      Home: 0,
+      End: TABS.length - 1,
+    }[event.key];
+    if (target === undefined) return; // any other key: leave it to the browser
+    event.preventDefault(); // e.g. stop Home/End from also scrolling the page
+    openTab(TABS[target].id);
+    document.getElementById(`tab-${TABS[target].id}`).focus();
+  }
+
+  // The content of the active tab. key={chapter.id} gives each chapter fresh flashcard and
+  // checklist state instead of carrying it over from the previous chapter.
+  let content;
+  if (tab === "summary") content = <Summary paragraphs={chapter.summary} lang={lang} />;
+  else if (tab === "concepts") content = <KeyConcepts concepts={chapter.key_concepts} lang={lang} />;
+  else if (tab === "practice") content = <Flashcards key={chapter.id} cards={chapter.qa_pairs} lang={lang} />;
+  else if (tab === "aids") content = <StudyAids key={chapter.id} aids={chapter.study_aids} lang={lang} />;
+  else content = chapter.quiz_unlocked ? <Quiz key={chapter.id} chapter={chapter} /> : <QuizLocked chapter={chapter} />;
 
   return (
     <section>
       <p>
-        <Link to={setUrl}>← {chapter.study_set_title || "Untitled study set"}</Link>
+        <Link to={setUrl}>
+          ←{" "}
+          {chapter.study_set_title ? <span lang={lang}>{chapter.study_set_title}</span> : "Untitled study set"}
+        </Link>
       </p>
       <p className="muted small chapter-kicker">
         Chapter {chapter.position} of {chapter.chapter_count}
       </p>
-      <h1>{chapter.title}</h1>
+      <h1 lang={lang}>{chapter.title}</h1>
 
-      <div className="tabs" role="tablist">
+      {/* Only the active tab has tabIndex 0, so Tab jumps from the tab row straight into the panel;
+          the other tabs are reached with the arrow keys. */}
+      <div className="tabs" role="tablist" aria-label="Chapter materials" onKeyDown={handleTabKeyDown}>
         {TABS.map((t) => (
           <button
             key={t.id}
+            id={`tab-${t.id}`}
             type="button"
             role="tab"
             aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
             className={`tab ${tab === t.id ? "active" : ""}`}
-            onClick={() => setSearchParams({ tab: t.id }, { replace: true })}
+            onClick={() => openTab(t.id)}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="tab-panel" role="tabpanel">
-        {/* Only the active tab is rendered. key={chapter.id} gives each chapter fresh flashcard and
-            checklist state instead of carrying it over from the previous chapter. */}
-        {tab === "summary" && <Summary paragraphs={chapter.summary} />}
-        {tab === "concepts" && <KeyConcepts concepts={chapter.key_concepts} />}
-        {tab === "practice" && <Flashcards key={chapter.id} cards={chapter.qa_pairs} />}
-        {tab === "aids" && <StudyAids key={chapter.id} aids={chapter.study_aids} />}
-        {tab === "quiz" &&
-          (chapter.quiz_unlocked ? <Quiz key={chapter.id} chapter={chapter} /> : <QuizLocked chapter={chapter} />)}
-      </div>
+      {/* One panel per tab, so every tab's aria-controls points at a real element. Only the active
+          panel is visible and filled; the others are empty and hidden. tabIndex={0} lets keyboard
+          users reach a panel that has nothing focusable in it (e.g. the summary). */}
+      {TABS.map((t) => (
+        <div
+          key={t.id}
+          id={`panel-${t.id}`}
+          className="tab-panel"
+          role="tabpanel"
+          aria-labelledby={`tab-${t.id}`}
+          tabIndex={0}
+          hidden={tab !== t.id}
+        >
+          {tab === t.id && content}
+        </div>
+      ))}
 
       <nav className="chapter-nav">
         {chapter.prev_chapter ? (
           <Link to={chapterUrl(chapter.prev_chapter)} className="button">
-            ← {chapter.prev_chapter.title}
+            ← <span lang={lang}>{chapter.prev_chapter.title}</span>
           </Link>
         ) : (
           <span />
         )}
         {chapter.next_chapter && (
           <Link to={chapterUrl(chapter.next_chapter)} className="button">
-            {chapter.next_chapter.title} →
+            <span lang={lang}>{chapter.next_chapter.title}</span> →
           </Link>
         )}
       </nav>

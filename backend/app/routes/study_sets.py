@@ -168,6 +168,7 @@ def set_detail(db: Session, study_set: StudySet) -> dict:
     return {
         "id": study_set.id,
         "title": study_set.title,
+        "language": study_set.language,
         "status": study_set.status,
         "status_message": study_set.status_message,
         "error": study_set.error,
@@ -186,7 +187,7 @@ def list_study_sets(user: User = Depends(get_current_user), db: Session = Depend
     ).all()
     return [
         {
-            "id": s.id, "title": s.title, "status": s.status, "created_at": s.created_at,
+            "id": s.id, "title": s.title, "language": s.language, "status": s.status, "created_at": s.created_at,
             "progress": progress(load_chapter_scores(db, s.id)),
         }
         for s in sets

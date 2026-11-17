@@ -9,6 +9,7 @@ import tempfile
 _dev_url = os.environ.get("DATABASE_URL", "postgresql+psycopg://agoranote:agoranote@db:5432/agoranote")
 _base, _dev_db = _dev_url.rsplit("/", 1)
 os.environ["DATABASE_URL"] = f"{_base}/agoranote_test"
+os.environ["STORAGE_BACKEND"] = "local"  # never the real R2 bucket from .env (test_storage.py fakes R2)
 os.environ["LOCAL_STORAGE_DIR"] = tempfile.mkdtemp(prefix="agoranote-test-")
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["TRANSCRIBE_PROVIDER"] = "mock"

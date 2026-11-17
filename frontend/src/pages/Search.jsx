@@ -13,7 +13,13 @@ function groupBySet(results) {
   for (const r of results) {
     let group = groups.find((g) => g.id === r.study_set_id);
     if (!group) {
-      group = { id: r.study_set_id, title: r.study_set_title || "Untitled study set", results: [] };
+      // lang only for a real title: the placeholder is English like the rest of the interface
+      group = {
+        id: r.study_set_id,
+        title: r.study_set_title || "Untitled study set",
+        lang: r.study_set_title ? r.language : null,
+        results: [],
+      };
       groups.push(group);
     }
     group.results.push(r);
@@ -61,16 +67,19 @@ export default function Search() {
         groupBySet(results).map((group) => (
           <div key={group.id} className="result-group">
             <h2>
-              <Link to={`/sets/${group.id}`}>{group.title}</Link>
+              <Link to={`/sets/${group.id}`} lang={group.lang}>
+                {group.title}
+              </Link>
             </h2>
             <ul className="results">
               {group.results.map((r) => (
                 <li key={r.chapter_id}>
                   <Link to={`/sets/${r.study_set_id}/chapters/${r.chapter_id}`} className="result">
                     <span className="result-title">
-                      Chapter {r.chapter_position}: {r.chapter_title}
+                      Chapter {r.chapter_position}: <span lang={r.language}>{r.chapter_title}</span>
                     </span>
-                    <span className="result-snippet">
+                    {/* the snippet is the chapter's own text, in the material's language */}
+                    <span className="result-snippet" lang={r.language}>
                       <Highlight text={r.snippet} />
                     </span>
                   </Link>

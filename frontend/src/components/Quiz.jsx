@@ -5,6 +5,8 @@
 // explanation, points) -> "Next question" reloads the state and shows the next open topic.
 // A wrong answer makes the server prepare a new question on that topic in the background; when no
 // question is available yet, the quiz shows "Preparing your next question…" and checks every 2 s.
+// Generated text (topics, questions, answers, explanations, chapter titles) gets lang={lang}, the
+// material's language; the quiz's own labels stay English like the rest of the interface.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -87,6 +89,7 @@ export default function Quiz({ chapter }) {
 
   const chapterUrl = (link) => `/sets/${chapter.study_set_id}/chapters/${link.id}?tab=quiz`;
   const { progress } = quiz;
+  const lang = chapter.language; // e.g. "el"; null = unknown (no lang attribute)
 
   return (
     <div className="quiz">
@@ -112,7 +115,7 @@ export default function Quiz({ chapter }) {
 
       {unlocked && (
         <div className="banner banner-success" role="status">
-          <span aria-hidden="true">🔓</span> You unlocked the quiz of <strong>{unlocked.title}</strong>!{" "}
+          <span aria-hidden="true">🔓</span> You unlocked the quiz of <strong lang={lang}>{unlocked.title}</strong>!{" "}
           <Link to={chapterUrl(unlocked)}>Go to that quiz →</Link>
         </div>
       )}
@@ -122,10 +125,10 @@ export default function Quiz({ chapter }) {
       {current && (
         <div className="question-card">
           <p className="muted small">
-            Topic: {current.name} · {current.points} points
+            Topic: <span lang={lang}>{current.name}</span> · {current.points} points
           </p>
-          <h2 className="question-prompt">{current.question.prompt}</h2>
-          <div className="options">
+          <h2 className="question-prompt" lang={lang}>{current.question.prompt}</h2>
+          <div className="options" lang={lang}>
             {current.question.options.map((option, i) => {
               // After answering: the correct option turns green, a wrong pick red.
               let state = "";
@@ -154,10 +157,10 @@ export default function Quiz({ chapter }) {
               ) : (
                 <p className="feedback-title">Not quite — the right answer is highlighted.</p>
               )}
-              <p>{answered.result.explanation}</p>
+              <p lang={lang}>{answered.result.explanation}</p>
               {answered.result.replacement_pending && (
                 <p className="small">
-                  A new question on <em>{current.name}</em> is being prepared.
+                  A new question on <em lang={lang}>{current.name}</em> is being prepared.
                 </p>
               )}
               <button type="button" className="primary" onClick={next}>
@@ -181,7 +184,7 @@ export default function Quiz({ chapter }) {
           <p>You mastered every topic in this chapter.</p>
           {chapter.next_chapter ? (
             <Link to={chapterUrl(chapter.next_chapter)} className="button primary">
-              Next chapter: {chapter.next_chapter.title} →
+              Next chapter: <span lang={lang}>{chapter.next_chapter.title}</span> →
             </Link>
           ) : (
             <Link to={`/sets/${chapter.study_set_id}`} className="button primary">

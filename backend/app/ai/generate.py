@@ -135,6 +135,7 @@ def structure(blocks: list[str]) -> StructureOut:
         # still no valid chapters: fall back to evenly sized chapters so the user isn't stuck
         log.exception("Structuring failed; falling back to even chapters")
         result = mock.structure(blocks)
+        result.language = ""  # the mock's "en" is only a guess: unknown (Greek is still recognised)
     #after validation on purpose: splitting may give more than the 10 chapters we ask the LLM for
     result.chapters = _split_large_chapters(_merge_small_chapters(result.chapters, blocks), blocks)
     return result

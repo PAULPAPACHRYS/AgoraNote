@@ -54,6 +54,9 @@ class StudySet(Base):
     error: Mapped[str | None] = mapped_column(Text)  # user-readable
     source_text: Mapped[str] = mapped_column(Text, default="")  # all files' text joined together
     overview: Mapped[str] = mapped_column(Text, default="")  # short summary of the whole material
+    # language code of the material ("el", "en", ...), set while structuring; the frontend puts it in
+    # lang="..." on the generated content so screen readers pronounce it right. None = unknown
+    language: Mapped[str | None] = mapped_column(String(8))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

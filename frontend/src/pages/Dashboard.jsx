@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { api } from "../api.js";
 import ProgressBar from "../components/ProgressBar.jsx";
-import { setTitle, statusLabel } from "../status.js";
+import { setTitle, statusLabel, titleLang } from "../status.js";
 
 export default function Dashboard() {
   const [sets, setSets] = useState(null); // null = still loading, [] = the user has no sets yet
@@ -47,7 +47,7 @@ export default function Dashboard() {
           {sets.map((s) => (
             <li key={s.id}>
               <Link to={`/sets/${s.id}`} className="card">
-                <span className="card-title">{setTitle(s)}</span>
+                <span className="card-title" lang={titleLang(s)}>{setTitle(s)}</span>
                 <span className={`badge badge-${s.status}`}>{statusLabel(s.status)}</span>
                 {s.status === "ready" && (
                   <span className="card-progress">

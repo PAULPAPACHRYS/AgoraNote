@@ -53,6 +53,7 @@ class StudySetListItem(BaseModel):
 
     id: int
     title: str | None
+    language: str | None  # the material's language code, for lang="..." (None = unknown)
     status: str
     progress: Progress
     created_at: datetime
@@ -76,6 +77,7 @@ class StudySetDetail(BaseModel):
 
     id: int
     title: str | None
+    language: str | None
     status: str
     status_message: str
     error: str | None
@@ -154,6 +156,7 @@ class SearchResult(BaseModel):
 
     study_set_id: int
     study_set_title: str | None
+    language: str | None  # the study set's language code
     chapter_id: int
     chapter_position: int
     chapter_title: str
@@ -172,8 +175,11 @@ class ChapterSpan(BaseModel):
 
 
 class StructureOut(BaseModel):
-    # the structuring step: title and overview of the whole set, and where each chapter starts and ends
+    # the structuring step: language, title and overview of the whole set, and where each chapter
+    # starts and ends. `language` has no rules here on purpose: a wrong code must not fail the whole
+    # step, so prompts.language_code() checks it afterwards
 
+    language: str
     title: str = Field(min_length=1)
     overview: str
     chapters: list[ChapterSpan] = Field(min_length=1, max_length=10)
@@ -282,6 +288,7 @@ class ChapterDetail(BaseModel):
     title: str
     study_set_id: int
     study_set_title: str | None
+    language: str | None  # the study set's language code
     chapter_count: int
     earned: int
     max: int

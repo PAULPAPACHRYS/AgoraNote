@@ -51,6 +51,7 @@ def get_chapter(chapter_id: int, user: User = Depends(get_current_user), db: Ses
         "title": chapter.title,
         "study_set_id": chapter.study_set_id,
         "study_set_title": chapter.study_set.title,
+        "language": chapter.study_set.language,
         "chapter_count": len(siblings),
         "earned": score["earned"],
         "max": score["max"],
