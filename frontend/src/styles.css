@@ -4,30 +4,72 @@
  * Structure:
  * - :root holds the design tokens as CSS variables (colours, radius, font). Change a colour here and
  *   it changes everywhere it is used as var(--name).
+ * - Display settings (see display.js) arrive as attributes on <html>: data-theme, data-text-size and
+ *   data-line-spacing. The rules right after the tokens turn them into colours and sizes.
  * - Then general element styles, followed by one section per part of the app (Layout, Buttons,
  *   Dashboard, Forms, Study set, Progress bars, Chapter, Quiz, Search).
  * - The @media rule at the end switches to a single column on narrow screens (phones).
  * Class names match the className="..." attributes in the components.
  */
 
-/* Design tokens */
+/* Design tokens
+ * Every colour is light-dark(light theme value, dark theme value). Which of the two is used follows
+ * `color-scheme`: "light dark" means "whatever the device is set to"; the theme setting can force one. */
 :root {
-  --bg: #f7f7f4;
-  --surface: #ffffff;
-  --text: #1f2328;
-  --muted: #5f6670;
-  --border: #e2e2dc;
-  --accent: #2f5d8a;
-  --accent-text: #ffffff;
-  --accent-soft: #e6eef6;
-  --success: #2e7d4f;
-  --success-soft: #e3f2e9;
-  --danger: #b3261e;
-  --danger-soft: #fbe9e7;
-  --warning-soft: #fdf3dc;
+  color-scheme: light dark;
+  --bg: light-dark(#f7f7f4, #16181b);
+  --surface: light-dark(#ffffff, #202328);
+  --text: light-dark(#1f2328, #e8e8e5);
+  --muted: light-dark(#5f6670, #a7adb5);
+  --border: light-dark(#e2e2dc, #3b4047);
+  --accent: light-dark(#2f5d8a, #8db8e6);
+  --accent-text: light-dark(#ffffff, #0f2236);
+  --accent-soft: light-dark(#e6eef6, #22344a);
+  --success: light-dark(#2e7d4f, #82d3a0);
+  --success-soft: light-dark(#e3f2e9, #1c3327);
+  --danger: light-dark(#b3261e, #f4a8a1);
+  --danger-text: light-dark(#ffffff, #2b0f0d); /* text on a red (danger) button */
+  --danger-soft: light-dark(#fbe9e7, #3e211f);
+  --warning-soft: light-dark(#fdf3dc, #3a3120);
+  --mark: light-dark(#fde68a, #5e4b0c); /* highlighted search words */
+  --mark-text: light-dark(#1f2328, #fff4c4);
   --focus: #f0b429;
   --radius: 8px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --line-height: 1.5;
+}
+
+/* Display settings: theme */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Display settings: text size. Almost every size in this file is in rem (a multiple of this root
+ * size), so everything grows together. Percentages keep the browser's own text size setting:
+ * 100% is whatever the user chose there (16px unless changed). */
+:root[data-text-size="small"] {
+  font-size: 90%;
+}
+
+:root[data-text-size="large"] {
+  font-size: 115%;
+}
+
+:root[data-text-size="larger"] {
+  font-size: 135%;
+}
+
+/* Display settings: line spacing */
+:root[data-line-spacing="relaxed"] {
+  --line-height: 1.8;
+}
+
+:root[data-line-spacing="wide"] {
+  --line-height: 2.1;
 }
 
 * {
@@ -39,7 +81,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  line-height: 1.5;
+  line-height: var(--line-height);
 }
 
 h1 {
@@ -84,6 +126,7 @@ a {
 }
 
 .brand {
+  margin-right: auto; /* pushes everything after it to the right */
   font-weight: 700;
   font-size: 1.25rem;
   color: var(--text);
@@ -93,7 +136,6 @@ a {
 .search-form {
   flex: 1;
   max-width: 420px;
-  margin-left: auto;
 }
 
 .search-form input {
@@ -106,10 +148,81 @@ a {
   color: inherit;
 }
 
-/* Clerk's user menu (avatar button) at the right end of the header */
+/* the right end of the header: the display settings button and (with Clerk) the user menu */
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Clerk's user menu (avatar button) */
 .user-menu {
   display: flex;
   align-items: center;
+}
+
+/* Display settings: the panel opens below its button, aligned to the right edge */
+.display-settings {
+  position: relative;
+}
+
+.display-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.15);
+}
+
+.display-panel[hidden] {
+  display: none;
+}
+
+.display-panel fieldset {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: none;
+}
+
+.display-panel legend {
+  margin-bottom: 0.4rem;
+  padding: 0;
+  font-weight: 600;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* each choice looks like a small button; the chosen one is highlighted */
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice input {
+  margin: 0;
+}
+
+.display-panel .actions {
+  justify-content: flex-end;
 }
 
 /* shown for a moment while Clerk starts */
@@ -174,7 +287,7 @@ button:disabled {
 .danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: #ffffff;
+  color: var(--danger-text);
 }
 
 .actions {
@@ -804,8 +917,8 @@ textarea {
 }
 
 mark {
-  background: #fde68a;
-  color: var(--text);
+  background: var(--mark);
+  color: var(--mark-text);
   padding: 0 0.1em;
   border-radius: 2px;
 }
@@ -821,6 +934,17 @@ mark {
   .main {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  /* not enough room for everything on one line: the search box gets a row of its own below */
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .search-form {
+    order: 1;
+    flex-basis: 100%;
+    max-width: none;
   }
 
   .cards {

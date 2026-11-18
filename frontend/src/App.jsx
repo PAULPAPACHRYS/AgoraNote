@@ -1,5 +1,5 @@
-// App.jsx: the layout around every page: the header (app name, search box and, with Clerk, the user
-// menu) and the page itself.
+// App.jsx: the layout around every page: the header (app name, search box, display settings and,
+// with Clerk, the user menu) and the page itself.
 //
 // Dev mode: the layout is shown straight away.
 // Clerk mode: signed-out visitors see a welcome screen with "Sign in" / "Create an account" (Clerk's
@@ -10,6 +10,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Show, SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
 
 import { AUTH_MODE, setTokenGetter } from "./auth.js";
+import DisplaySettings from "./components/DisplaySettings.jsx";
 
 export default function App() {
   // Clerk's components and hooks only work inside ClerkProvider, which exists only in Clerk mode
@@ -44,6 +45,9 @@ function SignedOutPage() {
     <div className="app">
       <header className="header">
         <Link to="/" className="brand">AgoraNote</Link>
+        <div className="header-end">
+          <DisplaySettings />
+        </div>
       </header>
       <main className="main">
         <div className="empty">
@@ -101,7 +105,10 @@ function Layout({ userMenu = null }) {
             maxLength={200}
           />
         </form>
-        {userMenu && <div className="user-menu">{userMenu}</div>}
+        <div className="header-end">
+          <DisplaySettings />
+          {userMenu && <div className="user-menu">{userMenu}</div>}
+        </div>
       </header>
       <main className="main">
         <Outlet />

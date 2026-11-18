@@ -10,6 +10,7 @@ import { ClerkProvider } from "@clerk/react";
 
 import App from "./App.jsx";
 import { AUTH_MODE } from "./auth.js";
+import { applyDisplay, loadDisplay } from "./display.js";
 import Chapter from "./pages/Chapter.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ErrorPage from "./pages/ErrorPage.jsx";
@@ -18,6 +19,9 @@ import NotFound from "./pages/NotFound.jsx";
 import Search from "./pages/Search.jsx";
 import StudySet from "./pages/StudySet.jsx";
 import "./styles.css";
+
+// Apply the saved display settings (theme, text size, line spacing) before the first page is drawn.
+applyDisplay(loadDisplay());
 
 // errorElement: what React Router shows instead of a route whose page crashed. The inner one (on a
 // route without a path, which only groups the pages) keeps the header around the error page; the
