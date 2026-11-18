@@ -106,7 +106,8 @@ function Layout({ userMenu = null }) {
           />
         </form>
         <div className="header-end">
-          <DisplaySettings />
+          {/* account: also save the settings to the signed-in user's account */}
+          <DisplaySettings account />
           {userMenu && <div className="user-menu">{userMenu}</div>}
         </div>
       </header>

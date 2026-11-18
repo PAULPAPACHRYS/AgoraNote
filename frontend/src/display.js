@@ -1,11 +1,14 @@
-// display.js: the display settings (theme, text size, line spacing).
+// display.js: the display settings (theme, text size, spacing, reading width, motion, links).
 //
-// They are saved in this browser's localStorage, so they survive a reload and already apply on the
-// sign-in screen. They belong to the browser, not to the account: another browser starts with the
-// defaults. They take effect as data-* attributes on <html> (e.g. <html data-theme="dark">), and
-// styles.css does the rest, so no component has to know about them.
+// They are kept in two places:
+// - this browser's localStorage, so they apply straight away on every visit, even on the sign-in screen;
+// - the user's account (GET/PUT /api/display-settings), so they follow the user to other browsers and
+//   devices. DisplaySettings.jsx loads them from there after signing in and saves every change there.
+// They take effect as data-* attributes on <html> (e.g. <html data-theme="dark">), and styles.css does
+// the rest, so no component has to know about them.
 
-// Every setting with its choices, in the order the settings panel shows them.
+// Every setting with its choices, in the order the settings panel shows them. The keys and values
+// match the API (backend/app/schemas.py, DisplaySettings), which refuses anything else.
 export const DISPLAY_SETTINGS = [
   {
     key: "theme",
@@ -14,10 +17,11 @@ export const DISPLAY_SETTINGS = [
       { value: "system", label: "Same as my device" }, // follows the operating system's light/dark mode
       { value: "light", label: "Light" },
       { value: "dark", label: "Dark" },
+      { value: "contrast", label: "High contrast" },
     ],
   },
   {
-    key: "textSize",
+    key: "text_size",
     label: "Text size",
     choices: [
       { value: "small", label: "Small" },
@@ -27,7 +31,7 @@ export const DISPLAY_SETTINGS = [
     ],
   },
   {
-    key: "lineSpacing",
+    key: "line_spacing",
     label: "Line spacing",
     choices: [
       { value: "normal", label: "Normal" },
@@ -35,38 +39,85 @@ export const DISPLAY_SETTINGS = [
       { value: "wide", label: "Wide" },
     ],
   },
+  {
+    key: "text_spacing",
+    label: "Letter and word spacing",
+    choices: [
+      { value: "normal", label: "Normal" },
+      { value: "wider", label: "Wider" },
+      { value: "widest", label: "Widest" },
+    ],
+  },
+  {
+    key: "reading_width",
+    label: "Reading width",
+    choices: [
+      { value: "narrow", label: "Narrow" },
+      { value: "normal", label: "Normal" },
+      { value: "wide", label: "Wide" },
+    ],
+  },
+  {
+    key: "reduce_motion",
+    label: "Reduce motion",
+    choices: [
+      { value: "system", label: "Same as my device" }, // the operating system's "reduce motion" setting
+      { value: "on", label: "On" },
+      { value: "off", label: "Off" },
+    ],
+  },
+  {
+    key: "underline_links",
+    label: "Underline all links",
+    choices: [
+      { value: "off", label: "Off" },
+      { value: "on", label: "On" },
+    ],
+  },
 ];
 
-export const DEFAULT_DISPLAY = { theme: "system", textSize: "normal", lineSpacing: "normal" };
+export const DEFAULT_DISPLAY = {
+  theme: "system",
+  text_size: "normal",
+  line_spacing: "normal",
+  text_spacing: "normal",
+  reading_width: "normal",
+  reduce_motion: "system",
+  underline_links: "off",
+};
 
 const STORAGE_KEY = "agoranote-display";
 
-// The saved settings, or the defaults. Unknown keys or values are ignored, so an old or hand-edited
-// entry can't break the page. localStorage can throw (e.g. when the browser blocks site data).
-export function loadDisplay() {
+// Complete, valid settings from `saved`: unknown keys or values are dropped and missing ones get
+// their default, so an old or hand-edited entry can't break the page.
+export function cleanDisplay(saved) {
   const settings = { ...DEFAULT_DISPLAY };
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    for (const setting of DISPLAY_SETTINGS) {
-      if (setting.choices.some((c) => c.value === saved[setting.key])) {
-        settings[setting.key] = saved[setting.key];
-      }
+  for (const setting of DISPLAY_SETTINGS) {
+    if (setting.choices.some((c) => c.value === saved?.[setting.key])) {
+      settings[setting.key] = saved[setting.key];
     }
-  } catch {
-    // nothing saved that we can read: keep the defaults
   }
   return settings;
 }
 
-// Put the settings on <html>: dataset.textSize becomes the attribute data-text-size, and so on.
-export function applyDisplay(settings) {
-  const root = document.documentElement;
-  root.dataset.theme = settings.theme;
-  root.dataset.textSize = settings.textSize;
-  root.dataset.lineSpacing = settings.lineSpacing;
+// The settings saved in this browser, or the defaults. localStorage can throw (e.g. when the browser
+// blocks site data), and the saved text might not be valid JSON.
+export function loadDisplay() {
+  try {
+    return cleanDisplay(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+  } catch {
+    return { ...DEFAULT_DISPLAY };
+  }
 }
 
-// Apply the settings straight away and remember them for next time.
+// Put the settings on <html>: text_size becomes the attribute data-text-size, and so on.
+export function applyDisplay(settings) {
+  for (const [key, value] of Object.entries(settings)) {
+    document.documentElement.setAttribute(`data-${key.replaceAll("_", "-")}`, value);
+  }
+}
+
+// Apply the settings straight away and remember them in this browser for next time.
 export function saveDisplay(settings) {
   applyDisplay(settings);
   try {

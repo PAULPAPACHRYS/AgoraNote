@@ -34,6 +34,9 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     auth_id: Mapped[str] = mapped_column(Text, unique=True)  # the JWT "sub" claim
     email: Mapped[str | None] = mapped_column(Text)
+    # the display settings chosen in the header's settings panel (theme, text size...), so they follow the
+    # user to other browsers and devices. None = never saved: the browser keeps its own settings
+    display_settings: Mapped[dict | None] = mapped_column(JSONB)
     # server_default=func.now(): the database fills in the current time when the row is inserted
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

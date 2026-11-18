@@ -4,8 +4,8 @@
  * Structure:
  * - :root holds the design tokens as CSS variables (colours, radius, font). Change a colour here and
  *   it changes everywhere it is used as var(--name).
- * - Display settings (see display.js) arrive as attributes on <html>: data-theme, data-text-size and
- *   data-line-spacing. The rules right after the tokens turn them into colours and sizes.
+ * - Display settings (see display.js) arrive as attributes on <html>, e.g. data-theme="dark" or
+ *   data-text-size="large". The rules right after the tokens turn them into colours and sizes.
  * - Then general element styles, followed by one section per part of the app (Layout, Buttons,
  *   Dashboard, Forms, Study set, Progress bars, Chapter, Quiz, Search).
  * - The @media rule at the end switches to a single column on narrow screens (phones).
@@ -34,9 +34,14 @@
   --mark: light-dark(#fde68a, #5e4b0c); /* highlighted search words */
   --mark-text: light-dark(#1f2328, #fff4c4);
   --focus: #f0b429;
+  --focus-width: 3px;
   --radius: 8px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
   --line-height: 1.5;
+  --letter-spacing: normal;
+  --word-spacing: normal;
+  --page-width: 960px; /* the main column */
+  --prose-width: 70ch; /* summary paragraphs: about 70 characters per line */
 }
 
 /* Display settings: theme */
@@ -46,6 +51,36 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+}
+
+/* High contrast: white text on black, bright links, white borders and a thicker yellow focus outline.
+ * These plain values replace the light-dark() pairs above. */
+:root[data-theme="contrast"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #000000;
+  --text: #ffffff;
+  --muted: #e0e0e0;
+  --border: #8a8a8a;
+  --accent: #7cc8ff;
+  --accent-text: #000000;
+  --accent-soft: #00284a;
+  --success: #6cf59a;
+  --success-soft: #002612;
+  --danger: #ff9b91;
+  --danger-text: #000000;
+  --danger-soft: #3a0000;
+  --warning-soft: #2e2600;
+  --mark: #ffe066;
+  --mark-text: #000000;
+  --focus: #ffe066;
+  --focus-width: 4px;
+}
+
+/* the cards, rows and boxes get a full white border, so their edges are easy to see */
+:root[data-theme="contrast"] :is(.card, .chapter-row, .result, .concept, .question-card, .empty,
+  .processing, .overall-progress, .flashcard, .display-panel, .header) {
+  border-color: var(--text);
 }
 
 /* Display settings: text size. Almost every size in this file is in rem (a multiple of this root
@@ -72,8 +107,61 @@
   --line-height: 2.1;
 }
 
+/* Display settings: letter and word spacing. "Widest" is the spacing WCAG 1.4.12 asks pages to cope
+ * with. Set on every element (see the `*` rule below), so em is measured against each element's own
+ * text size and headings get proportionally more. */
+:root[data-text-spacing="wider"] {
+  --letter-spacing: 0.05em;
+  --word-spacing: 0.1em;
+}
+
+:root[data-text-spacing="widest"] {
+  --letter-spacing: 0.12em;
+  --word-spacing: 0.16em;
+}
+
+/* Display settings: reading width */
+:root[data-reading-width="narrow"] {
+  --page-width: 720px;
+  --prose-width: 60ch;
+}
+
+:root[data-reading-width="wide"] {
+  --page-width: 1200px;
+  --prose-width: 85ch;
+}
+
+/* Display settings: reduce motion. Switches off the spinner, the fade-ins and the progress bar
+ * animation. "Same as my device" (no "off") follows the operating system's reduce-motion setting.
+ * !important because the animations are set by more specific rules further down. */
+:root[data-reduce-motion="on"] *,
+:root[data-reduce-motion="on"] *::before,
+:root[data-reduce-motion="on"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduce-motion="off"]) *,
+  :root:not([data-reduce-motion="off"]) *::before,
+  :root:not([data-reduce-motion="off"]) *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Display settings: underline all links. Plain text links are always underlined; this also underlines
+ * the links that look like cards, rows or buttons, so links can be told apart without colour. */
+:root[data-underline-links="on"] :is(.brand, .button, .card-title, .chapter-title, .result-title) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 * {
   box-sizing: border-box;
+  /* the letter and word spacing setting; on every element because buttons and inputs don't inherit it */
+  letter-spacing: var(--letter-spacing);
+  word-spacing: var(--word-spacing);
 }
 
 body {
@@ -98,7 +186,7 @@ a {
 }
 
 :focus-visible {
-  outline: 3px solid var(--focus);
+  outline: var(--focus-width) solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -171,7 +259,9 @@ a {
   top: calc(100% + 0.5rem);
   right: 0;
   z-index: 10;
-  width: min(22rem, calc(100vw - 2rem));
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 6rem); /* taller than the window: the panel scrolls */
+  overflow-y: auto;
   padding: 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -231,7 +321,7 @@ a {
 }
 
 .main {
-  max-width: 960px;
+  max-width: var(--page-width);
   margin: 0 auto;
   padding: 1.5rem;
 }
@@ -626,7 +716,7 @@ textarea {
 }
 
 .prose {
-  max-width: 70ch;
+  max-width: var(--prose-width);
   font-size: 1.05rem;
 }
 

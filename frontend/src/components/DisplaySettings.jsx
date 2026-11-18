@@ -1,5 +1,9 @@
 // DisplaySettings.jsx: the "Display settings" button in the header and the panel it opens, with the
-// theme, text size and line spacing (see display.js). A change applies straight away and is saved.
+// settings listed in display.js. A change applies straight away and is saved in this browser.
+//
+// With `account` (when signed in), the settings are also saved to the user's account: on opening the
+// app the account's settings replace this browser's (they may come from another device), and every
+// change is sent to the API. When the account has none saved yet, the browser's settings stay.
 //
 // It follows the WAI-ARIA "disclosure" pattern: the button says whether the panel is open
 // (aria-expanded) and which element it opens (aria-controls). The panel comes right after the button,
@@ -7,21 +11,44 @@
 // the button. The choices are radio buttons, so the arrow keys move between them.
 import { useEffect, useState } from "react";
 
-import { DEFAULT_DISPLAY, DISPLAY_SETTINGS, loadDisplay, saveDisplay } from "../display.js";
+import { api } from "../api.js";
+import { cleanDisplay, DEFAULT_DISPLAY, DISPLAY_SETTINGS, loadDisplay, saveDisplay } from "../display.js";
 
-export default function DisplaySettings() {
+export default function DisplaySettings({ account = false }) {
   const [open, setOpen] = useState(false);
-  const [settings, setSettings] = useState(loadDisplay); // the saved settings (or the defaults)
+  const [settings, setSettings] = useState(loadDisplay); // this browser's settings (or the defaults)
+  const [saveError, setSaveError] = useState("");
 
-  function change(key, value) {
-    const next = { ...settings, [key]: value };
+  // Signed in: load the settings saved in the account. null = none saved yet.
+  useEffect(() => {
+    if (!account) return;
+    api("/api/display-settings")
+      .then((saved) => {
+        if (!saved) return;
+        const fromAccount = cleanDisplay(saved);
+        setSettings(fromAccount);
+        saveDisplay(fromAccount);
+      })
+      .catch(() => {}); // e.g. the server can't be reached: keep this browser's settings
+  }, [account]);
+
+  // Apply and save new settings: always in this browser, and in the account when signed in.
+  function update(next) {
     setSettings(next);
     saveDisplay(next);
+    if (!account) return;
+    setSaveError("");
+    api("/api/display-settings", { method: "PUT", body: next }).catch(() =>
+      setSaveError("Couldn't save to your account. The settings are still saved in this browser.")
+    );
+  }
+
+  function change(key, value) {
+    update({ ...settings, [key]: value });
   }
 
   function reset() {
-    setSettings(DEFAULT_DISPLAY);
-    saveDisplay(DEFAULT_DISPLAY);
+    update(DEFAULT_DISPLAY);
   }
 
   function close() {
@@ -76,6 +103,11 @@ export default function DisplaySettings() {
             </div>
           </fieldset>
         ))}
+        {saveError && (
+          <p className="error small" role="alert">
+            {saveError}
+          </p>
+        )}
         <div className="actions">
           <button type="button" onClick={reset}>
             Reset to defaults

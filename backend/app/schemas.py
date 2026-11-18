@@ -12,7 +12,7 @@ They are used for 3 things:
    models, converted in code into the contract format
 """
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
@@ -32,6 +32,19 @@ class UserOut(ORMModel):
 
     id: int
     email: str | None
+
+
+class DisplaySettings(BaseModel):
+    # GET/PUT /api/display-settings: the choices of the settings panel (frontend/src/display.js lists
+    # the same values). Literal = only these values are accepted, anything else is a 422. A missing
+    # setting gets its default, so settings saved before a new one existed still load
+    theme: Literal["system", "light", "dark", "contrast"] = "system"
+    text_size: Literal["small", "normal", "large", "larger"] = "normal"
+    line_spacing: Literal["normal", "relaxed", "wide"] = "normal"
+    text_spacing: Literal["normal", "wider", "widest"] = "normal"
+    reading_width: Literal["narrow", "normal", "wide"] = "normal"
+    reduce_motion: Literal["system", "on", "off"] = "system"
+    underline_links: Literal["off", "on"] = "off"
 
 
 class StudySetCreated(BaseModel):
