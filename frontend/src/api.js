@@ -40,7 +40,16 @@ export async function api(path, options = {}) {
     // FastAPI errors look like {"detail": "Study set not found."}; show that text to the user.
     const detail = data && data.detail;
     const message = typeof detail === "string" ? detail : `Request failed (${response.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status; // e.g. 404, so a page can tell "doesn't exist" from other errors
+    throw error;
   }
   return data;
+}
+
+// True when a page's thing doesn't exist (or belongs to someone else, which the API also answers
+// with 404), so the page shows the "Page not found" page. 422 is FastAPI's answer to an id that
+// isn't a number at all (e.g. /sets/abc), which doesn't exist either.
+export function isNotFound(error) {
+  return error.status === 404 || error.status === 422;
 }

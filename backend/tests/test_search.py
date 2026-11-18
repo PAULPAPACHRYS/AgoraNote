@@ -19,11 +19,21 @@ def create_set(client, title, text):
     return client.get(f"/api/study-sets/{response.json()['id']}").json()
 
 
-def search(client, q):
-    """GET /api/search and return the list of results."""
+def search_all(client, q):
+    """GET /api/search and return both lists: {"study_sets": [...], "chapters": [...]}."""
     response = client.get("/api/search", params={"q": q})
     assert response.status_code == 200
     return response.json()
+
+
+def search(client, q):
+    """The chapters (content matches) of a search."""
+    return search_all(client, q)["chapters"]
+
+
+def titles(client, q):
+    """The titles of the study sets a search finds by title."""
+    return [s["title"] for s in search_all(client, q)["study_sets"]]
 
 
 def test_search_finds_a_term_and_links_to_its_chapter(client):
@@ -62,3 +72,33 @@ def test_search_only_returns_the_users_own_chapters(client):
         db.get(StudySet, study_set["id"]).user_id = other.id
         db.commit()
     assert search(client, "Rubisco") == []
+
+
+def test_search_finds_study_sets_by_title(client):
+    create_set(client, "Software Defined Networking", LECTURE)
+    create_set(client, "Απειροστικός Λογισμός ΙΙ", GREEK)
+    create_set(client, "Plants", LECTURE)
+    # every word must appear in the title, in any order, also as part of a word, ignoring case
+    assert titles(client, "networking") == ["Software Defined Networking"]
+    assert titles(client, "netw defined") == ["Software Defined Networking"]
+    assert titles(client, "λογισμός") == ["Απειροστικός Λογισμός ΙΙ"]
+    assert titles(client, "networking plants") == []
+    # quotes are ignored and "-word" is skipped, like in the content search
+    assert titles(client, '"Plants" -calvin') == ["Plants"]
+    # % and _ are ordinary characters, not wildcards
+    assert titles(client, "%") == [] and titles(client, "_") == []
+    # newest first, with what the results page needs
+    assert titles(client, "n") == ["Plants", "Software Defined Networking"]
+    [greek] = search_all(client, "λογισμός")["study_sets"]
+    assert greek["language"] == "el" and greek["status"] == "ready"
+
+
+def test_title_search_only_returns_the_users_own_sets(client):
+    study_set = create_set(client, "Plants", LECTURE)
+    with SessionLocal() as db:
+        other = User(auth_id="someone-else-2")
+        db.add(other)
+        db.flush()
+        db.get(StudySet, study_set["id"]).user_id = other.id
+        db.commit()
+    assert search_all(client, "Plants") == {"study_sets": [], "chapters": []}

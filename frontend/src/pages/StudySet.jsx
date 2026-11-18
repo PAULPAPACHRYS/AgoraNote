@@ -4,10 +4,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { api } from "../api.js";
+import { api, isNotFound } from "../api.js";
 import ChapterList from "../components/ChapterList.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
 import { setTitle, statusLabel, titleLang } from "../status.js";
+import NotFound from "./NotFound.jsx";
 
 const POLL_MS = 3000; // how often to ask for the status while processing
 
@@ -21,6 +22,7 @@ export default function StudySet() {
   const navigate = useNavigate();
   const [studySet, setStudySet] = useState(null);
   const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false); // no such set (or not this user's): show the 404 page
   const [pollKey, setPollKey] = useState(0); // bumped by Retry to start polling again
   const [retrying, setRetrying] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false); // two-step delete: ask first
@@ -29,6 +31,7 @@ export default function StudySet() {
   // Load the set, then keep polling while it is being processed.
   useEffect(() => {
     let timer = null;
+    setNotFound(false); // a new id: forget that the previous one didn't exist
     function load() {
       api(`/api/study-sets/${id}`)
         .then((data) => {
@@ -36,7 +39,14 @@ export default function StudySet() {
           setError("");
           if (isFinished(data.status)) clearInterval(timer);
         })
-        .catch((err) => setError(err.message));
+        .catch((err) => {
+          if (isNotFound(err)) {
+            setNotFound(true); // also when the set is deleted (e.g. in another tab) while polling
+            clearInterval(timer);
+          } else {
+            setError(err.message);
+          }
+        });
     }
     load();
     timer = setInterval(load, POLL_MS);
@@ -68,7 +78,8 @@ export default function StudySet() {
     }
   }
 
-  // Couldn't load at all (e.g. the set doesn't exist): show only the error.
+  if (notFound) return <NotFound />;
+  // Couldn't load at all (e.g. the server can't be reached): show only the error.
   if (error && !studySet) {
     return (
       <section>

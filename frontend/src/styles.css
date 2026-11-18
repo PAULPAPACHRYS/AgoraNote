@@ -757,9 +757,16 @@ textarea {
 
 /* Search */
 
-.result-group h2 {
-  font-size: 1.1rem;
-  margin: 1.5rem 0 0.5rem;
+.result-group h3 {
+  font-size: 1.05rem;
+  margin: 1rem 0 0.5rem;
+}
+
+/* a study set found by its title: title on the left, status badge (if any) on the right */
+.result.result-set {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .results {

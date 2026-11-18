@@ -151,8 +151,17 @@ class AnswerOut(BaseModel):
     replacement_pending: bool
 
 
-class SearchResult(BaseModel):
-    # one hit of GET /api/search: which chapter matched, with a highlighted snippet
+class SetSearchResult(BaseModel):
+    # a study set whose title matched the search
+
+    id: int
+    title: str
+    language: str | None  # the study set's language code
+    status: str
+
+
+class ChapterSearchResult(BaseModel):
+    # a chapter whose content matched the search, with a highlighted snippet
 
     study_set_id: int
     study_set_title: str | None
@@ -161,6 +170,13 @@ class SearchResult(BaseModel):
     chapter_position: int
     chapter_title: str
     snippet: str  # matches wrapped in [[ ]]
+
+
+class SearchResults(BaseModel):
+    # GET /api/search: study sets matched by title, and chapters matched by content
+
+    study_sets: list[SetSearchResult]
+    chapters: list[ChapterSearchResult]
 
 
 # --- LLM output contracts (see prompts.py) ----------------------------------------------------

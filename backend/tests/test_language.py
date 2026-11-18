@@ -37,5 +37,5 @@ def test_every_response_carries_the_language(client):
     chapter_id = detail["chapters"][0]["id"]
     assert client.get(f"/api/chapters/{chapter_id}").json()["language"] == "el"
 
-    results = client.get("/api/search", params={"q": "φωτοσύνθεση"}).json()
+    results = client.get("/api/search", params={"q": "φωτοσύνθεση"}).json()["chapters"]
     assert results and all(r["language"] == "el" for r in results)

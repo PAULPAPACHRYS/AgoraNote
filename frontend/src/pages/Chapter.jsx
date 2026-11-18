@@ -12,9 +12,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { api } from "../api.js";
+import { api, isNotFound } from "../api.js";
 import Flashcards from "../components/Flashcards.jsx";
 import Quiz from "../components/Quiz.jsx";
+import NotFound from "./NotFound.jsx";
 
 // The tabs in display order: `id` is what appears in ?tab=, `label` is the button text.
 const TABS = [
@@ -129,6 +130,7 @@ export default function Chapter() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [chapter, setChapter] = useState(null);
   const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false); // no such chapter (or not this user's): 404 page
 
   // The active tab lives in ?tab= so it can be linked to.
   const tab = TABS.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab") : "summary";
@@ -137,11 +139,13 @@ export default function Chapter() {
   useEffect(() => {
     setChapter(null);
     setError("");
+    setNotFound(false);
     api(`/api/chapters/${chapterId}`)
       .then(setChapter)
-      .catch((err) => setError(err.message));
+      .catch((err) => (isNotFound(err) ? setNotFound(true) : setError(err.message)));
   }, [chapterId]);
 
+  if (notFound) return <NotFound />;
   if (error) {
     return (
       <section>

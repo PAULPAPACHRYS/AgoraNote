@@ -1,11 +1,15 @@
 // Search.jsx: the search results page ("/search?q=...").
-// The header's search box navigates here; this page asks the API and shows the matching chapters,
-// grouped by study set, each with a snippet in which the matched words are highlighted.
+// The header's search box navigates here; this page asks the API and shows two kinds of results:
+// - study sets whose title matches (to find one set among many by its name),
+// - chapters whose content matches, grouped by study set, each with a snippet in which the matched
+//   words are highlighted.
+// When nothing matches, a button leads back to the home screen.
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { api } from "../api.js";
 import Highlight from "../components/Highlight.jsx";
+import { statusLabel } from "../status.js";
 
 // Results arrive best match first; keep that order while grouping them by study set.
 function groupBySet(results) {
@@ -30,7 +34,7 @@ function groupBySet(results) {
 export default function Search() {
   const [searchParams] = useSearchParams();
   const q = (searchParams.get("q") || "").trim(); // the search words from the URL
-  const [results, setResults] = useState(null);
+  const [results, setResults] = useState(null); // { study_sets: [...], chapters: [...] }
   const [error, setError] = useState("");
 
   // Search again whenever the query in the URL changes. encodeURIComponent makes spaces, quotes and
@@ -53,24 +57,51 @@ export default function Search() {
     );
   }
 
+  const nothingFound = results && results.study_sets.length === 0 && results.chapters.length === 0;
+
   return (
     <section>
       <h1>Results for “{q}”</h1>
       {error && <p className="error">{error}</p>}
       {!results && !error && <p className="muted">Searching…</p>}
-      {results && results.length === 0 && (
-        <p className="muted">
-          No chapters match “{q}”. Try a different word, or check the spelling (accents count in Greek).
-        </p>
+      {nothingFound && (
+        <>
+          <p className="muted">
+            No study sets or chapters match “{q}”. Try a different word, or check the spelling (accents
+            count in Greek).
+          </p>
+          <Link to="/" className="button">Back to home screen</Link>
+        </>
       )}
+
+      {results && results.study_sets.length > 0 && (
+        <>
+          <h2>Study sets</h2>
+          <ul className="results">
+            {results.study_sets.map((s) => (
+              <li key={s.id}>
+                <Link to={`/sets/${s.id}`} className="result result-set">
+                  <span className="result-title" lang={s.language}>{s.title}</span>
+                  {/* the status only when it isn't simply ready, e.g. "Processing" or "Failed" */}
+                  {s.status !== "ready" && (
+                    <span className={`badge badge-${s.status}`}>{statusLabel(s.status)}</span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {results && results.chapters.length > 0 && <h2>Chapters</h2>}
       {results &&
-        groupBySet(results).map((group) => (
+        groupBySet(results.chapters).map((group) => (
           <div key={group.id} className="result-group">
-            <h2>
+            <h3>
               <Link to={`/sets/${group.id}`} lang={group.lang}>
                 {group.title}
               </Link>
-            </h2>
+            </h3>
             <ul className="results">
               {group.results.map((r) => (
                 <li key={r.chapter_id}>
