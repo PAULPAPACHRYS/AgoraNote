@@ -12,21 +12,33 @@ import App from "./App.jsx";
 import { AUTH_MODE } from "./auth.js";
 import Chapter from "./pages/Chapter.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import ErrorPage from "./pages/ErrorPage.jsx";
 import NewStudySet from "./pages/NewStudySet.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import Search from "./pages/Search.jsx";
 import StudySet from "./pages/StudySet.jsx";
 import "./styles.css";
 
+// errorElement: what React Router shows instead of a route whose page crashed. The inner one (on a
+// route without a path, which only groups the pages) keeps the header around the error page; the
+// outer one catches errors in App/the layout itself. "*" matches any URL no other route matches.
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <ErrorPage standalone />,
     children: [
-      { index: true, element: <Dashboard /> },
-      { path: "new", element: <NewStudySet /> },
-      { path: "sets/:id", element: <StudySet /> },
-      { path: "sets/:id/chapters/:chapterId", element: <Chapter /> },
-      { path: "search", element: <Search /> },
+      {
+        errorElement: <ErrorPage />,
+        children: [
+          { index: true, element: <Dashboard /> },
+          { path: "new", element: <NewStudySet /> },
+          { path: "sets/:id", element: <StudySet /> },
+          { path: "sets/:id/chapters/:chapterId", element: <Chapter /> },
+          { path: "search", element: <Search /> },
+          { path: "*", element: <NotFound /> },
+        ],
+      },
     ],
   },
 ]);

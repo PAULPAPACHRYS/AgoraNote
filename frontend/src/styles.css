@@ -223,8 +223,24 @@ button:disabled {
   border-radius: var(--radius);
 }
 
+.empty h1,
 .empty h2 {
   margin-top: 0;
+}
+
+/* Error page: the technical details (development only) */
+.error-details {
+  margin-top: 1.25rem;
+}
+
+.error-details pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
 }
 
 .badge {
