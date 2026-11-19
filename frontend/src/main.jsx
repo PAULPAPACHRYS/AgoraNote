@@ -16,6 +16,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import ErrorPage from "./pages/ErrorPage.jsx";
 import NewStudySet from "./pages/NewStudySet.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import Privacy from "./pages/Privacy.jsx";
 import Search from "./pages/Search.jsx";
 import StudySet from "./pages/StudySet.jsx";
 import "./styles.css";
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
           { path: "sets/:id", element: <StudySet /> },
           { path: "sets/:id/chapters/:chapterId", element: <Chapter /> },
           { path: "search", element: <Search /> },
+          { path: "privacy", element: <Privacy /> }, // also open to signed-out visitors (App.jsx)
           { path: "*", element: <NotFound /> },
         ],
       },

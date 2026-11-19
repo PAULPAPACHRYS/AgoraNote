@@ -1041,3 +1041,17 @@ mark {
     grid-template-columns: 1fr;
   }
 }
+
+/* Footer with the privacy link, at the bottom of every page */
+.footer {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+/* Privacy page: room between sections */
+.privacy h2 {
+  margin-top: 2rem;
+}

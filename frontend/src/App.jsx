@@ -1,5 +1,5 @@
 // App.jsx: the layout around every page: the header (app name, search box, display settings and,
-// with Clerk, the user menu) and the page itself.
+// with Clerk, the user menu), the page itself and the footer (privacy link).
 //
 // Dev mode: the layout is shown straight away.
 // Clerk mode: signed-out visitors see a welcome screen with "Sign in" / "Create an account" (Clerk's
@@ -40,7 +40,11 @@ function ClerkApp() {
 
 // What a visitor sees before signing in. The buttons are Clerk's: mode="modal" opens Clerk's sign-in
 // or sign-up form in a pop-up; our own <button> inside decides how the button looks.
+// The privacy page is the one page open to signed-out visitors, so it can be read before signing up.
 function SignedOutPage() {
+  const location = useLocation();
+  const publicPage = location.pathname === "/privacy";
+
   return (
     <div className="app">
       <header className="header">
@@ -50,23 +54,30 @@ function SignedOutPage() {
         </div>
       </header>
       <main className="main">
-        <div className="empty">
-          <h1>Welcome to AgoraNote</h1>
-          <p>
-            Upload lecture notes or a lecture recording, or paste some text. AgoraNote splits it into
-            chapters and writes a summary, key concepts, practice questions and study aids for each one.
-            Then test yourself with chapter quizzes and unlock the next chapter.
-          </p>
-          <div className="actions">
-            <SignInButton mode="modal">
-              <button type="button" className="primary">Sign in</button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button type="button">Create an account</button>
-            </SignUpButton>
-          </div>
-        </div>
+        {publicPage ? <Outlet /> : <Welcome />}
       </main>
+      <Footer />
+    </div>
+  );
+}
+
+function Welcome() {
+  return (
+    <div className="empty">
+      <h1>Welcome to AgoraNote</h1>
+      <p>
+        Upload lecture notes or a lecture recording, or paste some text. AgoraNote splits it into
+        chapters and writes a summary, key concepts, practice questions and study aids for each one.
+        Then test yourself with chapter quizzes and unlock the next chapter.
+      </p>
+      <div className="actions">
+        <SignInButton mode="modal">
+          <button type="button" className="primary">Sign in</button>
+        </SignInButton>
+        <SignUpButton mode="modal">
+          <button type="button">Create an account</button>
+        </SignUpButton>
+      </div>
     </div>
   );
 }
@@ -114,6 +125,16 @@ function Layout({ userMenu = null }) {
       <main className="main">
         <Outlet />
       </main>
+      <Footer />
     </div>
+  );
+}
+
+// At the bottom of every page, signed in or not.
+function Footer() {
+  return (
+    <footer className="footer">
+      <Link to="/privacy">Privacy</Link>
+    </footer>
   );
 }
