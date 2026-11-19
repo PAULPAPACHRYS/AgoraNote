@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- AgoraNote's icon: a white "A" on the app's accent blue (the accent colour in styles.css). Drawn with
+       lines rather than text, so it looks the same whatever fonts the device has. -->
+  <rect width="32" height="32" rx="7" fill="#2f5d8a"/>
+  <path d="M9 25 16 7l7 18M11.8 18.5h8.4" fill="none" stroke="#fff" stroke-width="3.2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
