@@ -19,7 +19,7 @@ from app import config, storage
 from app.auth import get_current_user
 from app.db import engine
 from app.models import Base, User
-from app.routes import chapters, display_settings, quiz, search, study_sets
+from app.routes import chapters, display_settings, quiz, search, study_sets, webhooks
 from app.schemas import UserOut
 
 # dev auth trusts everyone as the same user, so it must never reach production ( will before deployment)
@@ -58,6 +58,7 @@ app.include_router(chapters.router)  # /api/chapters/{id}
 app.include_router(quiz.router)  # /api/chapters/{id}/quiz, /api/questions/{id}/answer
 app.include_router(search.router)  # /api/search
 app.include_router(display_settings.router)  # /api/display-settings
+app.include_router(webhooks.router)  # /api/webhooks/clerk (called by Clerk, not by the frontend)
 
 
 @app.get("/api/health")

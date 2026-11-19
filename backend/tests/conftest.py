@@ -3,6 +3,7 @@
 Run with: docker compose run --rm api pytest
 """
 import os
+import shutil
 import tempfile
 
 # Point the app at the test database BEFORE any app module reads the config.
@@ -56,11 +57,14 @@ def database():
 
 @pytest.fixture(autouse=True)
 def clean_tables():
-    """Every test starts with empty tables."""
+    """Every test starts with empty tables and an empty storage folder. (Ids restart at 1, so files
+    left by an earlier test would otherwise sit exactly where the next test's files go.)"""
     yield
     names = ", ".join(table.name for table in Base.metadata.sorted_tables)
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+    shutil.rmtree(config.LOCAL_STORAGE_DIR)
+    os.makedirs(config.LOCAL_STORAGE_DIR)
 
 
 @pytest.fixture

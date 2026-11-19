@@ -25,7 +25,7 @@ import time
 
 import httpx
 from celery import Celery
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
 from app import config, storage
@@ -62,6 +62,17 @@ TRANSCRIBE_UNREACHABLE_ERROR = (
 def ping():
     # trivial task used to check that the worker is wired up
     return "pong"
+
+
+class StudySetDeleted(Exception):
+    # the set was deleted while it was being processed (Delete button, or the whole account deleted)
+    pass
+
+
+def study_set_exists(db, study_set_id: int) -> bool:
+    # asks the database itself (db.get could answer from the session's memory), so a set the API
+    # deleted while this worker was busy is noticed
+    return db.scalar(select(StudySet.id).where(StudySet.id == study_set_id)) is not None
 
 
 def set_status(db, study_set: StudySet, status: str, message: str = "") -> None:
@@ -111,6 +122,11 @@ def process_study_set(self, study_set_id: int):
             run_pipeline(db, study_set)
         except Exception as exc:
             db.rollback()  # throw away half-done, uncommitted changes before writing the error
+            # deleted while being processed: StudySetDeleted, or any database error from saving to the
+            # deleted row (e.g. the next status update). Nothing left to save, report or retry
+            if not study_set_exists(db, study_set_id):
+                log.info("Study set %s was deleted during processing; stopped (%s)", study_set_id, type(exc).__name__)
+                return
             if isinstance(exc, httpx.HTTPError) and self.request.retries < self.max_retries:
                 log.warning("Provider error on study set %s, will retry: %s", study_set_id, exc)
                 set_status(db, study_set, study_set.status, "The AI service had a hiccup, retrying…")
@@ -181,6 +197,9 @@ def run_pipeline(db, study_set: StudySet) -> None:
     httpx errors from the AI services through (they are retried)
     """
     started = time.monotonic()
+    # noted now: after each commit SQLAlchemy reloads study_set's values from the database on the next
+    # read, which fails once the set has been deleted, so the deletion check below can't use study_set.id
+    set_id = study_set.id
     # idempotent: a retry starts from a clean slate
     db.execute(delete(Chapter).where(Chapter.study_set_id == study_set.id))
     study_set.error = None
@@ -225,6 +244,12 @@ def run_pipeline(db, study_set: StudySet) -> None:
             if not texts[f.position].strip():
                 raise ProcessingError(f'No speech was found in "{f.original_filename}".')
             storage.save(transcript_key, io.BytesIO(texts[f.position].encode("utf-8")))
+            # Deleted during the transcription? Then the transcript belongs to nothing: remove it and stop.
+            # Checked after saving, not before, so a deletion at any moment is caught: if it came before
+            # this check, the check sees it; if after, the API's delete removes the transcript itself
+            if not study_set_exists(db, set_id):
+                storage.delete(transcript_key)
+                raise StudySetDeleted()
 
     # --- 3. combine and check the text ------------------------------------------------------------
     #join the files in upload order; with several files, a heading line marks where each starts

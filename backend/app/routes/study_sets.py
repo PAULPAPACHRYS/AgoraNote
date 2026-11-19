@@ -218,12 +218,24 @@ def retry_study_set(set_id: int, user: User = Depends(get_current_user), db: Ses
 def delete_study_set(set_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # delete a set with all its chapters, quizzes and stored files. 204 = done
     study_set = get_owned_set(db, user, set_id)
-    keys = [f.storage_key for f in study_set.source_files]
-    # recordings may also have a saved transcript next to them (deleting a missing one is fine)
-    keys += [storage.transcript_key(f.storage_key) for f in study_set.source_files if f.kind == "audio"]
+    keys = stored_file_keys(study_set)
     db.delete(study_set)  # rows below it are removed by ON DELETE CASCADE
     db.commit()
     # files go after the commit: a leftover file is harmless, a row pointing at a missing file is not
+    delete_stored_files(keys)
+
+
+# also used when a whole account is deleted (routes/webhooks.py)
+def stored_file_keys(study_set: StudySet) -> list[str]:
+    # every file a set has in storage: its uploads and, for recordings, the saved transcript
+    # (deleting a transcript that was never saved is fine)
+    keys = [f.storage_key for f in study_set.source_files]
+    keys += [storage.transcript_key(f.storage_key) for f in study_set.source_files if f.kind == "audio"]
+    return keys
+
+
+def delete_stored_files(keys: list[str]) -> None:
+    # one file that can't be deleted (e.g. R2 briefly unreachable) must not stop the others
     for key in keys:
         try:
             storage.delete(key)

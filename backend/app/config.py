@@ -38,6 +38,10 @@ AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "").rstrip("/")
 # Where Clerk publishes the public keys that token signatures are checked with. Clerk's standard
 # location is the Frontend API URL + /.well-known/jwks.json, so it can usually stay empty.
 AUTH_JWKS_URL = os.environ.get("AUTH_JWKS_URL", "") or (AUTH_ISSUER and f"{AUTH_ISSUER}/.well-known/jwks.json")
+# Clerk dashboard -> Webhooks -> the endpoint's "Signing Secret" (whsec_...). Clerk signs every webhook
+# with it, so routes/webhooks.py can tell a real "account deleted" message from a forged one.
+# Empty = the webhook endpoint refuses every message
+CLERK_WEBHOOK_SIGNING_SECRET = os.environ.get("CLERK_WEBHOOK_SIGNING_SECRET", "")
 
 # --- storage --------------------------------------------------------------------------------------
 
