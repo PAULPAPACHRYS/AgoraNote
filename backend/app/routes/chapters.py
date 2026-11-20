@@ -64,6 +64,7 @@ def get_chapter(chapter_id: int, user: User = Depends(get_current_user), db: Ses
         "key_concepts": chapter.key_concepts,
         "qa_pairs": chapter.qa_pairs,
         "study_aids": chapter.study_aids,
+        "content": chapter.content,
         "prev_chapter": _link(siblings[index - 1] if index > 0 else None),
         "next_chapter": _link(siblings[index + 1] if index + 1 < len(siblings) else None),
     }

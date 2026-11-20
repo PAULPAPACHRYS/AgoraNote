@@ -54,6 +54,14 @@ def answer(client, question_id, selected_index):
     return client.post(f"/api/questions/{question_id}/answer", json={"selected_index": selected_index})
 
 
+def test_chapters_show_their_part_of_the_material(client, study_set):
+    # the chapters' content (the "Source" tab), in order, is the uploaded text again. Spaces are
+    # compared loosely: a long paragraph may be cut at a sentence end into two paragraphs
+    contents = [client.get(f"/api/chapters/{c['id']}").json()["content"] for c in study_set["chapters"]]
+    assert all(contents)
+    assert " ".join(" ".join(contents).split()) == " ".join(LECTURE.split())
+
+
 def test_quiz_never_reveals_answers(client, study_set):
     state = quiz(client, study_set["chapters"][0]["id"])
     assert len(state["topics"]) == config.QUESTIONS_PER_CHAPTER

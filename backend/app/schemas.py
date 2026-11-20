@@ -338,6 +338,7 @@ class ChapterDetail(BaseModel):
     key_concepts: list[KeyConcept]
     qa_pairs: list[QAPair]
     study_aids: StudyAids
+    content: str  # this chapter's part of the uploaded material (the "Source" tab)
     prev_chapter: ChapterLinkOut | None
     next_chapter: ChapterLinkOut | None
 

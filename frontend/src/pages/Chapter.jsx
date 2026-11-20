@@ -1,5 +1,5 @@
-// Chapter.jsx: one chapter ("/sets/:id/chapters/:chapterId") with five tabs:
-// Summary, Key concepts, Q&A practice (flashcards), Study aids and Quiz (or a "locked" notice).
+// Chapter.jsx: one chapter ("/sets/:id/chapters/:chapterId") with six tabs: Summary, Key concepts,
+// Q&A practice (flashcards), Study aids, Quiz (or a "locked" notice) and Source (the material itself).
 // The active tab is kept in the URL (?tab=quiz), so a link can open a chapter on a specific tab.
 //
 // The tabs follow the WAI-ARIA "tabs" pattern (https://www.w3.org/WAI/ARIA/apg/patterns/tabs/):
@@ -19,7 +19,14 @@ import { t } from "../i18n.js";
 import NotFound from "./NotFound.jsx";
 
 // The tabs in display order: `id` is what appears in ?tab=; the button text is t("chapter.tab.<id>").
-const TABS = [{ id: "summary" }, { id: "concepts" }, { id: "practice" }, { id: "aids" }, { id: "quiz" }];
+const TABS = [
+  { id: "summary" },
+  { id: "concepts" },
+  { id: "practice" },
+  { id: "aids" },
+  { id: "quiz" },
+  { id: "source" },
+];
 
 // Shown on the Quiz tab while this chapter's quiz is locked: what to do to unlock it.
 function QuizLocked({ chapter }) {
@@ -50,6 +57,22 @@ function Summary({ paragraphs, lang }) {
         <p key={i}>{p}</p>
       ))}
     </div>
+  );
+}
+
+// "Source" tab: the chapter's part of the uploaded material, as it was read from the files (or
+// transcribed), so a summary can be checked against the original. Paragraphs are separated by blank
+// lines; line breaks inside a paragraph (e.g. from a PDF) are kept by CSS (white-space: pre-line).
+function SourceText({ text, lang }) {
+  return (
+    <>
+      <p className="muted small">{t("chapter.source_intro")}</p>
+      <div className="prose source-text" lang={lang}>
+        {text.split(/\n\s*\n/).map((paragraph, i) => (
+          <p key={i}>{paragraph}</p>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -184,6 +207,7 @@ export default function Chapter() {
   else if (tab === "concepts") content = <KeyConcepts concepts={chapter.key_concepts} lang={lang} />;
   else if (tab === "practice") content = <Flashcards key={chapter.id} cards={chapter.qa_pairs} lang={lang} />;
   else if (tab === "aids") content = <StudyAids key={chapter.id} aids={chapter.study_aids} lang={lang} />;
+  else if (tab === "source") content = <SourceText text={chapter.content} lang={lang} />;
   else content = chapter.quiz_unlocked ? <Quiz key={chapter.id} chapter={chapter} /> : <QuizLocked chapter={chapter} />;
 
   return (
