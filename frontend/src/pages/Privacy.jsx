@@ -1,12 +1,30 @@
 // Privacy.jsx: the privacy page (/privacy). It says what AgoraNote stores, where, and how to delete it.
 // Anyone can open it, signed in or not (see App.jsx), so people can read it before creating an account.
 //
-// Keep it true: when the setup changes (database host, AI provider), change this page with it.
+// The page is long prose with links in it, so it is written out once per language here instead of
+// being cut into i18n.js texts. Keep both versions saying the same, and keep them true: when the setup
+// changes (database host, AI provider), change this page with it.
 import { Link } from "react-router-dom";
+
+import { language } from "../i18n.js";
 
 export default function Privacy() {
   return (
     <article className="prose privacy">
+      {language === "el" ? <PrivacyGreek /> : <PrivacyEnglish />}
+      <p className="muted small">
+        {language === "el" ? "Τελευταία ενημέρωση: 19 Νοεμβρίου 2026" : "Last updated: 19 November 2026"}
+      </p>
+      <p>
+        <Link to="/">{language === "el" ? "Πίσω στο AgoraNote" : "Back to AgoraNote"}</Link>
+      </p>
+    </article>
+  );
+}
+
+function PrivacyEnglish() {
+  return (
+    <>
       <h1>Privacy</h1>
       <p>
         This page explains what AgoraNote stores about you, where it is kept and how to delete it.
@@ -40,7 +58,7 @@ export default function Privacy() {
           questions;
         </li>
         <li>your quiz answers, points and progress;</li>
-        <li>your display settings (theme, text size and so on).</li>
+        <li>your display settings (theme, text size and so on) and your language.</li>
       </ul>
       <p>
         Other AgoraNote users can't see any of it. As with any website, the people who run AgoraNote can
@@ -48,7 +66,8 @@ export default function Privacy() {
         address asked for which page, and when) to find and fix problems.
       </p>
 
-      {/* Phase 10: update this section when the deployed app switches to a hosted AI provider. */}
+      {/* Phase 10: update this section (in both languages) when the deployed app switches to a hosted
+          AI provider. */}
       <h2>How your material is processed: AI</h2>
       <p>
         AgoraNote uses AI models to split your material into chapters, write the study material and
@@ -59,8 +78,8 @@ export default function Privacy() {
       <h2>In your browser</h2>
       <ul>
         <li>
-          Your display settings are saved in your browser, so they apply straight away, even before you
-          sign in.
+          Your display settings and language are saved in your browser, so they apply straight away,
+          even before you sign in.
         </li>
         <li>
           Clerk keeps you signed in with cookies. They are needed for signing in and are not used for
@@ -81,11 +100,96 @@ export default function Privacy() {
           deletes all your study sets, files and progress.
         </li>
       </ul>
+    </>
+  );
+}
 
-      <p className="muted small">Last updated: 19 November 2026</p>
+// The same as PrivacyEnglish, in Greek. The button names are the ones the Greek interface shows
+// (Clerk's own menu included).
+function PrivacyGreek() {
+  return (
+    <>
+      <h1>Απόρρητο</h1>
       <p>
-        <Link to="/">Back to AgoraNote</Link>
+        Αυτή η σελίδα εξηγεί τι αποθηκεύει το AgoraNote για εσάς, πού φυλάσσεται και πώς μπορείτε να το
+        διαγράψετε. Το AgoraNote δεν δείχνει διαφημίσεις, δεν πουλά και δεν μοιράζεται τα δεδομένα σας,
+        και δεν χρησιμοποιεί εργαλεία ανάλυσης ή παρακολούθησης.
       </p>
-    </article>
+
+      <h2>Ο λογαριασμός σας: Clerk</h2>
+      <p>
+        Τη σύνδεση τη διαχειρίζεται η <a href="https://clerk.com/legal/privacy">Clerk</a>, μια εταιρεία με
+        έδρα στις Ηνωμένες Πολιτείες. Η Clerk αποθηκεύει τον λογαριασμό σας: τη διεύθυνση email σας, το
+        όνομα και τη φωτογραφία σας αν τα προσθέσετε, τον κωδικό σας ή τον λογαριασμό με τον οποίο
+        συνδέεστε (π.χ. Google), και μια λίστα με τις συσκευές στις οποίες είστε συνδεδεμένοι. Το AgoraNote
+        δεν βλέπει ποτέ τον κωδικό σας.
+      </p>
+      <p>
+        Η βάση δεδομένων του AgoraNote κρατά μόνο το αναγνωριστικό που δίνει η Clerk στον λογαριασμό σας
+        και τη διεύθυνση email σας, ώστε να ξέρει ποια σετ μελέτης είναι δικά σας.
+      </p>
+
+      <h2>Το υλικό μελέτης σας: Cloudflare R2 και η βάση δεδομένων του AgoraNote</h2>
+      <p>
+        Τα αρχεία που ανεβάζετε (έγγραφα και ηχογραφήσεις) αποθηκεύονται στο R2 της{" "}
+        <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare</a>, μια υπηρεσία αποθήκευσης στο
+        διαδίκτυο, σε έναν ιδιωτικό χώρο που μόνο οι διακομιστές του AgoraNote μπορούν να ανοίξουν. Εκεί
+        φυλάσσονται και οι γραπτές απομαγνητοφωνήσεις των ηχογραφήσεών σας.
+      </p>
+      <p>Η βάση δεδομένων του AgoraNote αποθηκεύει:</p>
+      <ul>
+        <li>
+          το κείμενο που προέρχεται από τα αρχεία σας ή που επικολλήσατε, και τα ονόματα και τα μεγέθη
+          των αρχείων σας·
+        </li>
+        <li>
+          ό,τι δημιουργείται από αυτό: κεφάλαια, περιλήψεις, βασικές έννοιες, κάρτες ερωτήσεων, βοηθήματα
+          μελέτης και ερωτήσεις κουίζ·
+        </li>
+        <li>τις απαντήσεις σας στα κουίζ, τους πόντους και την πρόοδό σας·</li>
+        <li>τις ρυθμίσεις εμφάνισης (θέμα, μέγεθος κειμένου κ.λπ.) και τη γλώσσα σας.</li>
+      </ul>
+      <p>
+        Οι άλλοι χρήστες του AgoraNote δεν μπορούν να δουν τίποτα από αυτά. Όπως σε κάθε ιστότοπο, όσοι
+        λειτουργούν το AgoraNote έχουν τεχνικά πρόσβαση στα αποθηκευμένα δεδομένα. Οι διακομιστές κρατούν
+        επίσης τεχνικά αρχεία καταγραφής (για παράδειγμα, ποια διεύθυνση ζήτησε ποια σελίδα και πότε) για
+        τον εντοπισμό και τη διόρθωση προβλημάτων.
+      </p>
+
+      <h2>Πώς επεξεργάζεται το υλικό σας: AI</h2>
+      <p>
+        Το AgoraNote χρησιμοποιεί μοντέλα AI για να χωρίσει το υλικό σας σε κεφάλαια, να γράψει το υλικό
+        μελέτης και τις ερωτήσεις των κουίζ, και να μετατρέψει τις ηχογραφήσεις σε κείμενο. Αυτά τα μοντέλα
+        τρέχουν στον υπολογιστή του ίδιου του AgoraNote, οπότε το υλικό σας δεν στέλνεται σε καμία εταιρεία
+        AI και δεν χρησιμοποιείται για την εκπαίδευση μοντέλων AI.
+      </p>
+
+      <h2>Στο πρόγραμμα περιήγησής σας</h2>
+      <ul>
+        <li>
+          Οι ρυθμίσεις εμφάνισης και η γλώσσα σας αποθηκεύονται στο πρόγραμμα περιήγησής σας, ώστε να
+          ισχύουν αμέσως, ακόμη και πριν συνδεθείτε.
+        </li>
+        <li>
+          Η Clerk σάς κρατά συνδεδεμένους με cookies. Χρειάζονται για τη σύνδεση και δεν χρησιμοποιούνται
+          για παρακολούθηση.
+        </li>
+      </ul>
+
+      <h2>Πόσο καιρό φυλάσσεται και πώς διαγράφεται</h2>
+      <p>Το υλικό σας φυλάσσεται μέχρι να το διαγράψετε.</p>
+      <ul>
+        <li>
+          <strong>Ένα σετ μελέτης:</strong> ανοίξτε το και επιλέξτε «Διαγραφή σετ μελέτης». Τα αρχεία του,
+          οι απομαγνητοφωνήσεις και ό,τι δημιουργήθηκε από αυτό διαγράφονται αμέσως.
+        </li>
+        <li>
+          <strong>Ολόκληρος ο λογαριασμός σας:</strong> ανοίξτε το μενού λογαριασμού πάνω δεξιά, επιλέξτε
+          «Διαχείριση λογαριασμού» και διαγράψτε τον λογαριασμό σας στην ενότητα «Ασφάλεια». Η Clerk
+          διαγράφει τον λογαριασμό σας και το AgoraNote διαγράφει όλα τα σετ μελέτης, τα αρχεία και την
+          πρόοδό σας.
+        </li>
+      </ul>
+    </>
   );
 }

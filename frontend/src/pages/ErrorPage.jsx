@@ -8,6 +8,7 @@
 //   header and doesn't rely on anything that may be broken (like the sign-in components).
 import { Link, isRouteErrorResponse, useRouteError } from "react-router-dom";
 
+import { t } from "../i18n.js";
 import NotFound from "./NotFound.jsx";
 
 export default function ErrorPage({ standalone = false }) {
@@ -21,22 +22,19 @@ export default function ErrorPage({ standalone = false }) {
     <NotFound />
   ) : (
     <section className="empty" role="alert">
-      <h1>Something went wrong</h1>
-      <p>
-        Sorry, this page ran into a problem and couldn't be shown. Your study sets and points are safe:
-        they are stored on the server. Try loading the page again, or go back to your study sets.
-      </p>
+      <h1>{t("error.title")}</h1>
+      <p>{t("error.text")}</p>
       <div className="actions">
         {/* a full reload starts the app afresh, which fixes most one-off problems */}
         <button type="button" className="primary" onClick={() => window.location.reload()}>
-          Try again
+          {t("error.try_again")}
         </button>
-        <Link to="/" className="button">Back to your study sets</Link>
+        <Link to="/" className="button">{t("common.back_to_sets")}</Link>
       </div>
       {/* the technical details help while developing; users of the built app don't see them */}
       {import.meta.env.DEV && (
         <details className="error-details">
-          <summary>Error details (development only)</summary>
+          <summary>{t("error.details")}</summary>
           <pre>{error instanceof Error ? error.stack || error.message : JSON.stringify(error, null, 2)}</pre>
         </details>
       )}

@@ -34,6 +34,7 @@ from app.ai.extract import ProcessingError, extract_text, split_into_blocks
 from app.ai.prompts import detect_language, language_code
 from app.ai.transcribe import transcribe
 from app.db import SessionLocal
+from app.messages import message
 from app.models import Chapter, Question, StudySet, Topic
 
 log = logging.getLogger(__name__)
@@ -51,11 +52,9 @@ celery.conf.task_routes = {"app.worker.generate_replacement_question": {"queue":
 
 MIN_INPUT_CHARS = 500  # less text than this is not enough to build chapters and quizzes from
 # user-readable error messages, stored in study_set.error and shown on the study set page
-GENERIC_ERROR = "Something went wrong while processing this study set. Please try again."
-UNREACHABLE_ERROR = "The AI service could not be reached or took too long to answer. Please try again later."
-TRANSCRIBE_UNREACHABLE_ERROR = (
-    "The transcription service could not be reached or took too long to answer. Please try again later."
-)
+GENERIC_ERROR = message("processing_failed")
+UNREACHABLE_ERROR = message("ai_unreachable")
+TRANSCRIBE_UNREACHABLE_ERROR = message("transcription_unreachable")
 
 
 @celery.task
@@ -75,10 +74,11 @@ def study_set_exists(db, study_set_id: int) -> bool:
     return db.scalar(select(StudySet.id).where(StudySet.id == study_set_id)) is not None
 
 
-def set_status(db, study_set: StudySet, status: str, message: str = "") -> None:
+def set_status(db, study_set: StudySet, status: str, status_message: dict | None = None) -> None:
     # save a new pipeline status right away (commit), so the polling browser sees the progress
+    # status_message: what the step is doing, as a message code plus values (see messages.py)
     study_set.status = status
-    study_set.status_message = message
+    study_set.status_message = status_message
     db.commit()
 
 
@@ -129,11 +129,11 @@ def process_study_set(self, study_set_id: int):
                 return
             if isinstance(exc, httpx.HTTPError) and self.request.retries < self.max_retries:
                 log.warning("Provider error on study set %s, will retry: %s", study_set_id, exc)
-                set_status(db, study_set, study_set.status, "The AI service had a hiccup, retrying…")
+                set_status(db, study_set, study_set.status, message("retrying"))
                 raise  # autoretry_for re-queues the task with backoff
             log.exception("Processing study set %s failed", study_set_id)
             if isinstance(exc, ProcessingError):
-                study_set.error = str(exc)
+                study_set.error = exc.message
             elif isinstance(exc, httpx.HTTPError):
                 #status still says which step was running: transcription or the LLM steps
                 transcribing = study_set.status == "transcribing"
@@ -204,7 +204,7 @@ def run_pipeline(db, study_set: StudySet) -> None:
     db.execute(delete(Chapter).where(Chapter.study_set_id == study_set.id))
     study_set.error = None
     study_set.overview = ""
-    set_status(db, study_set, "extracting", "Reading your files")
+    set_status(db, study_set, "extracting", message("reading_files"))
 
     # --- 1. extracting / 2. transcribing: every file to text -----------------------------------
     files = study_set.source_files  # in upload order (position)
@@ -221,14 +221,13 @@ def run_pipeline(db, study_set: StudySet) -> None:
                 except ProcessingError:
                     raise
                 except Exception as exc:  # e.g. a corrupt .docx: tell the user which file
-                    raise ProcessingError(f'"{f.original_filename}" could not be read.') from exc
+                    raise ProcessingError("file_unreadable", filename=f.original_filename) from exc
 
         #recordings after the documents: transcription is the slow part, 
         # so its progress gets its own status messages ("Transcribing recording 1 of 2 (part 3 of 7)")
         audio = [f for f in files if f.kind == "audio"]
         for i, f in enumerate(audio, start=1):
-            label = f"Transcribing recording {i} of {len(audio)}"
-            set_status(db, study_set, "transcribing", label)
+            set_status(db, study_set, "transcribing", message("transcribing", recording=i, total=len(audio)))
             # A transcript saved by an earlier run (an automatic retry or the Retry button) is reused,
             # so a recording is transcribed only once, however often processing is repeated.
             transcript_key = storage.transcript_key(f.storage_key)
@@ -239,10 +238,12 @@ def run_pipeline(db, study_set: StudySet) -> None:
             storage.download(f.storage_key, local[f.position])  # recordings are only copied when needed
             texts[f.position] = transcribe(
                 local[f.position], f.original_filename,
-                on_progress=lambda part, parts: set_status(db, study_set, "transcribing", f"{label} (part {part} of {parts})"),
+                on_progress=lambda part, parts: set_status(db, study_set, "transcribing", message(
+                    "transcribing_part", recording=i, total=len(audio), part=part, parts=parts,
+                )),
             )
             if not texts[f.position].strip():
-                raise ProcessingError(f'No speech was found in "{f.original_filename}".')
+                raise ProcessingError("no_speech", filename=f.original_filename)
             storage.save(transcript_key, io.BytesIO(texts[f.position].encode("utf-8")))
             # Deleted during the transcription? Then the transcript belongs to nothing: remove it and stop.
             # Checked after saving, not before, so a deletion at any moment is caught: if it came before
@@ -258,16 +259,13 @@ def run_pipeline(db, study_set: StudySet) -> None:
     else:
         source_text = "\n\n".join(f"=== {f.original_filename} ===\n\n{texts[f.position]}" for f in files)
     if len(source_text) > config.MAX_INPUT_CHARS:
-        raise ProcessingError(
-            f"The material is too long ({len(source_text):,} characters; the limit is "
-            f"{config.MAX_INPUT_CHARS:,}). Try splitting it into several study sets."
-        )
+        raise ProcessingError("material_too_long", length=len(source_text), max=config.MAX_INPUT_CHARS)
     if len(source_text.strip()) < MIN_INPUT_CHARS:
-        raise ProcessingError("Not enough material to build a study set.")
+        raise ProcessingError("not_enough_material")
     study_set.source_text = source_text
 
     # --- 4. structuring: find the chapters -----------------------------------------------------
-    set_status(db, study_set, "structuring", "Finding the chapters")
+    set_status(db, study_set, "structuring", message("finding_chapters"))
     # ~1,000-character pieces, the LLM groups consecutive blocks into chapters
     blocks = split_into_blocks(source_text)
     structure = generate.structure(blocks)
@@ -280,7 +278,7 @@ def run_pipeline(db, study_set: StudySet) -> None:
     language = detect_language(source_text)  # the whole set's language, passed to every chapter
     total = len(structure.chapters)
     for position, span in enumerate(structure.chapters, start=1):
-        set_status(db, study_set, "generating", f"Generating chapter {position} of {total}")
+        set_status(db, study_set, "generating", message("generating_chapter", position=position, total=total))
         #chapter's own text, its blocks joined back together
         content = "\n\n".join(blocks[span.start_block : span.end_block + 1])
         materials = generate.chapter_materials(span.title, content, language)

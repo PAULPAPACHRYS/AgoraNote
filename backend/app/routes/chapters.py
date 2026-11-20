@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
+from app.messages import message
 from app.gamification import load_chapter_scores, points_to_unlock
 from app.models import Chapter, StudySet, User
 from app.schemas import ChapterDetail
@@ -27,7 +28,7 @@ def get_owned_chapter(db: Session, user: User, chapter_id: int) -> Chapter:
         select(Chapter).join(StudySet).where(Chapter.id == chapter_id, StudySet.user_id == user.id)
     )
     if chapter is None:
-        raise HTTPException(status_code=404, detail="Chapter not found.")
+        raise HTTPException(status_code=404, detail=message("chapter_not_found"))
     return chapter
 
 

@@ -1055,3 +1055,13 @@ mark {
 .privacy h2 {
   margin-top: 2rem;
 }
+
+/* Text only screen readers hear (e.g. "Language:" before the language button's text) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

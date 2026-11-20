@@ -7,10 +7,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ClerkProvider } from "@clerk/react";
+import { elGR } from "@clerk/localizations";
 
 import App from "./App.jsx";
 import { AUTH_MODE } from "./auth.js";
 import { applyDisplay, loadDisplay } from "./display.js";
+import { language } from "./i18n.js";
 import Chapter from "./pages/Chapter.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ErrorPage from "./pages/ErrorPage.jsx";
@@ -21,7 +23,8 @@ import Search from "./pages/Search.jsx";
 import StudySet from "./pages/StudySet.jsx";
 import "./styles.css";
 
-// Apply the saved display settings (theme, text size, line spacing) before the first page is drawn.
+// Apply the saved display settings (theme, text size, ..., and the language as <html lang>) before the
+// first page is drawn.
 applyDisplay(loadDisplay());
 
 // errorElement: what React Router shows instead of a route whose page crashed. The inner one (on a
@@ -56,10 +59,16 @@ const app = <RouterProvider router={router} />;
 // In Clerk mode the whole app sits inside ClerkProvider, which loads Clerk, keeps track of the signed-in
 // user and makes Clerk's components and hooks (used in App.jsx) work. The publishable key only
 // identifies our Clerk instance; it is not a secret. afterSignOutUrl: where to go after signing out.
+// localization: Clerk's own texts (sign-in forms, account menu) in Greek when the interface is Greek;
+// without it Clerk uses English.
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     {AUTH_MODE === "clerk" ? (
-      <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+      <ClerkProvider
+        publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+        afterSignOutUrl="/"
+        localization={language === "el" ? elGR : undefined}
+      >
         {app}
       </ClerkProvider>
     ) : (

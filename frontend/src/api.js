@@ -2,11 +2,13 @@
 //
 // Every page calls `api(path, options)` instead of `fetch` directly, so these things happen in one
 // place for every request: the API's address is prefixed, the login token is attached, JSON is
-// encoded and decoded, and errors become JavaScript Errors with a readable message.
+// encoded and decoded, and errors become JavaScript Errors with a readable message in the interface
+// language.
 //
 // Example: const sets = await api("/api/study-sets");
 //          await api(`/api/questions/${id}/answer`, { method: "POST", body: { selected_index: 2 } });
 import { getToken } from "./auth.js";
+import { messageText, t } from "./i18n.js";
 
 // Read at build time from the VITE_API_URL environment variable (see .env.example).
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -31,15 +33,17 @@ export async function api(path, options = {}) {
   try {
     response = await fetch(API_URL + path, { ...options, headers, body });
   } catch {
-    throw new Error("Could not reach the server. Is the API running?");
+    throw new Error(t("error.no_server"));
   }
 
   // Some answers have no body (e.g. 204 after a delete): then `data` is null.
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    // FastAPI errors look like {"detail": "Study set not found."}; show that text to the user.
+    // Our API's errors carry a message code plus values, e.g.
+    // {"detail": {"code": "study_set_not_found", "values": {}}}, shown in the interface language.
+    // Others (e.g. FastAPI's own 422 answers) get a general text with the status code.
     const detail = data && data.detail;
-    const message = typeof detail === "string" ? detail : `Request failed (${response.status})`;
+    const message = detail && detail.code ? messageText(detail) : t("error.request_failed", { status: response.status });
     const error = new Error(message);
     error.status = response.status; // e.g. 404, so a page can tell "doesn't exist" from other errors
     throw error;

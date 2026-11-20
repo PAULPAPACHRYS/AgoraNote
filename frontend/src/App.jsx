@@ -1,5 +1,5 @@
-// App.jsx: the layout around every page: the header (app name, search box, display settings and,
-// with Clerk, the user menu), the page itself and the footer (privacy link).
+// App.jsx: the layout around every page: the header (app name, search box, language button, display
+// settings and, with Clerk, the user menu), the page itself and the footer (privacy link).
 //
 // Dev mode: the layout is shown straight away.
 // Clerk mode: signed-out visitors see a welcome screen with "Sign in" / "Create an account" (Clerk's
@@ -11,6 +11,8 @@ import { Show, SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/re
 
 import { AUTH_MODE, setTokenGetter } from "./auth.js";
 import DisplaySettings from "./components/DisplaySettings.jsx";
+import LanguageButton from "./components/LanguageButton.jsx";
+import { t } from "./i18n.js";
 
 export default function App() {
   // Clerk's components and hooks only work inside ClerkProvider, which exists only in Clerk mode
@@ -24,7 +26,7 @@ function ClerkApp() {
   // the pages below start loading data: children's effects run before their parent's effects.
   setTokenGetter(getToken);
 
-  if (!isLoaded) return <p className="muted loading-auth">Loading…</p>; // Clerk is still starting
+  if (!isLoaded) return <p className="muted loading-auth">{t("common.loading")}</p>; // Clerk is still starting
 
   return (
     <>
@@ -50,6 +52,7 @@ function SignedOutPage() {
       <header className="header">
         <Link to="/" className="brand">AgoraNote</Link>
         <div className="header-end">
+          <LanguageButton />
           <DisplaySettings />
         </div>
       </header>
@@ -64,18 +67,16 @@ function SignedOutPage() {
 function Welcome() {
   return (
     <div className="empty">
-      <h1>Welcome to AgoraNote</h1>
+      <h1>{t("welcome.title")}</h1>
       <p>
-        Upload lecture notes or a lecture recording, or paste some text. AgoraNote splits it into
-        chapters and writes a summary, key concepts, practice questions and study aids for each one.
-        Then test yourself with chapter quizzes and unlock the next chapter.
+        {t("welcome.intro")} {t("welcome.quizzes_short")}
       </p>
       <div className="actions">
         <SignInButton mode="modal">
-          <button type="button" className="primary">Sign in</button>
+          <button type="button" className="primary">{t("welcome.sign_in")}</button>
         </SignInButton>
         <SignUpButton mode="modal">
-          <button type="button">Create an account</button>
+          <button type="button">{t("welcome.sign_up")}</button>
         </SignUpButton>
       </div>
     </div>
@@ -111,13 +112,14 @@ function Layout({ userMenu = null }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your study sets"
-            aria-label="Search your study sets"
+            placeholder={t("nav.search")}
+            aria-label={t("nav.search")}
             maxLength={200}
           />
         </form>
         <div className="header-end">
-          {/* account: also save the settings to the signed-in user's account */}
+          {/* account: also save the choices to the signed-in user's account */}
+          <LanguageButton account />
           <DisplaySettings account />
           {userMenu && <div className="user-menu">{userMenu}</div>}
         </div>
@@ -134,7 +136,7 @@ function Layout({ userMenu = null }) {
 function Footer() {
   return (
     <footer className="footer">
-      <Link to="/privacy">Privacy</Link>
+      <Link to="/privacy">{t("nav.privacy")}</Link>
     </footer>
   );
 }

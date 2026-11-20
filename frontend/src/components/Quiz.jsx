@@ -6,11 +6,12 @@
 // A wrong answer makes the server prepare a new question on that topic in the background; when no
 // question is available yet, the quiz shows "Preparing your next question…" and checks every 2 s.
 // Generated text (topics, questions, answers, explanations, chapter titles) gets lang={lang}, the
-// material's language; the quiz's own labels stay English like the rest of the interface.
+// material's language; the quiz's own labels are in the interface language (i18n.js).
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api.js";
+import { t } from "../i18n.js";
 import ProgressBar from "./ProgressBar.jsx";
 
 const WAIT_POLL_MS = 2000;
@@ -85,7 +86,7 @@ export default function Quiz({ chapter }) {
     load();
   }
 
-  if (!quiz) return error ? <p className="error">{error}</p> : <p className="muted">Loading quiz…</p>;
+  if (!quiz) return error ? <p className="error">{error}</p> : <p className="muted">{t("quiz.loading")}</p>;
 
   const chapterUrl = (link) => `/sets/${chapter.study_set_id}/chapters/${link.id}?tab=quiz`;
   const { progress } = quiz;
@@ -95,28 +96,27 @@ export default function Quiz({ chapter }) {
     <div className="quiz">
       <div className="quiz-points">
         <div className="quiz-points-row">
-          <strong>
-            Chapter points: {quiz.earned} / {quiz.max}
-          </strong>
+          <strong>{t("quiz.chapter_points_value", { earned: quiz.earned, max: quiz.max })}</strong>
           {chapter.next_chapter && (
-            <span className="muted small">Unlock next chapter at {quiz.unlock_threshold} pts</span>
+            <span className="muted small">{t("quiz.unlock_at", { n: quiz.unlock_threshold })}</span>
           )}
         </div>
         <ProgressBar
           value={quiz.earned}
           max={quiz.max}
           marker={chapter.next_chapter ? quiz.unlock_threshold : null}
-          label="Chapter points"
+          label={t("quiz.chapter_points")}
         />
         <p className="muted small">
-          All chapters: {progress.earned} / {progress.total} points · {progress.percent}%
+          {t("quiz.all_chapters", { earned: progress.earned, total: progress.total, percent: progress.percent })}
         </p>
       </div>
 
       {unlocked && (
         <div className="banner banner-success" role="status">
-          <span aria-hidden="true">🔓</span> You unlocked the quiz of <strong lang={lang}>{unlocked.title}</strong>!{" "}
-          <Link to={chapterUrl(unlocked)}>Go to that quiz →</Link>
+          <span aria-hidden="true">🔓</span>{" "}
+          {t("quiz.unlocked", { title: <strong lang={lang}>{unlocked.title}</strong> })}{" "}
+          <Link to={chapterUrl(unlocked)}>{t("quiz.unlocked_link")}</Link>
         </div>
       )}
 
@@ -125,7 +125,7 @@ export default function Quiz({ chapter }) {
       {current && (
         <div className="question-card">
           <p className="muted small">
-            Topic: <span lang={lang}>{current.name}</span> · {current.points} points
+            {t("quiz.topic", { name: <span lang={lang}>{current.name}</span>, count: current.points })}
           </p>
           <h2 className="question-prompt" lang={lang}>{current.question.prompt}</h2>
           <div className="options" lang={lang}>
@@ -153,18 +153,18 @@ export default function Quiz({ chapter }) {
           {answered && (
             <div className={`feedback ${answered.result.correct ? "feedback-correct" : "feedback-wrong"}`} role="status">
               {answered.result.correct ? (
-                <p className="feedback-title">Correct! +{answered.result.points_awarded} points</p>
+                <p className="feedback-title">{t("quiz.correct", { count: answered.result.points_awarded })}</p>
               ) : (
-                <p className="feedback-title">Not quite — the right answer is highlighted.</p>
+                <p className="feedback-title">{t("quiz.wrong")}</p>
               )}
               <p lang={lang}>{answered.result.explanation}</p>
               {answered.result.replacement_pending && (
                 <p className="small">
-                  A new question on <em lang={lang}>{current.name}</em> is being prepared.
+                  {t("quiz.replacement", { topic: <em lang={lang}>{current.name}</em> })}
                 </p>
               )}
               <button type="button" className="primary" onClick={next}>
-                Next question
+                {t("quiz.next_question")}
               </button>
             </div>
           )}
@@ -174,21 +174,21 @@ export default function Quiz({ chapter }) {
       {waiting && (
         <div className="processing" role="status">
           <span className="spinner" aria-hidden="true" />
-          <span>Preparing your next question…</span>
+          <span>{t("quiz.preparing")}</span>
         </div>
       )}
 
       {allMastered && !answered && (
         <div className="banner banner-success">
-          <p className="feedback-title">Chapter complete!</p>
-          <p>You mastered every topic in this chapter.</p>
+          <p className="feedback-title">{t("quiz.complete")}</p>
+          <p>{t("quiz.mastered")}</p>
           {chapter.next_chapter ? (
             <Link to={chapterUrl(chapter.next_chapter)} className="button primary">
-              Next chapter: <span lang={lang}>{chapter.next_chapter.title}</span> →
+              {t("quiz.next_chapter", { title: <span lang={lang}>{chapter.next_chapter.title}</span> })}
             </Link>
           ) : (
             <Link to={`/sets/${chapter.study_set_id}`} className="button primary">
-              Back to the study set
+              {t("quiz.back_to_set")}
             </Link>
           )}
         </div>

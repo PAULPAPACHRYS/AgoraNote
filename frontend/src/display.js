@@ -1,80 +1,37 @@
-// display.js: the display settings (theme, text size, spacing, reading width, motion, links).
+// display.js: the display settings (theme, text size, spacing, reading width, motion, links) and the
+// interface language.
 //
 // They are kept in two places:
 // - this browser's localStorage, so they apply straight away on every visit, even on the sign-in screen;
 // - the user's account (GET/PUT /api/display-settings), so they follow the user to other browsers and
 //   devices. DisplaySettings.jsx loads them from there after signing in and saves every change there.
 // They take effect as data-* attributes on <html> (e.g. <html data-theme="dark">), and styles.css does
-// the rest, so no component has to know about them.
+// the rest, so no component has to know about them. The language becomes <html lang="...">.
 
-// Every setting with its choices, in the order the settings panel shows them. The keys and values
-// match the API (backend/app/schemas.py, DisplaySettings), which refuses anything else.
+// Every setting of the settings panel with its choices, in the order the panel shows them. Their
+// labels are in i18n.js ("display.theme", "display.theme.dark", ...). The keys and values match the
+// API (backend/app/schemas.py, DisplaySettings), which refuses anything else.
 export const DISPLAY_SETTINGS = [
-  {
-    key: "theme",
-    label: "Theme",
-    choices: [
-      { value: "system", label: "Same as my device" }, // follows the operating system's light/dark mode
-      { value: "light", label: "Light" },
-      { value: "dark", label: "Dark" },
-      { value: "contrast", label: "High contrast" },
-    ],
-  },
-  {
-    key: "text_size",
-    label: "Text size",
-    choices: [
-      { value: "small", label: "Small" },
-      { value: "normal", label: "Normal" },
-      { value: "large", label: "Large" },
-      { value: "larger", label: "Extra large" },
-    ],
-  },
-  {
-    key: "line_spacing",
-    label: "Line spacing",
-    choices: [
-      { value: "normal", label: "Normal" },
-      { value: "relaxed", label: "Relaxed" },
-      { value: "wide", label: "Wide" },
-    ],
-  },
-  {
-    key: "text_spacing",
-    label: "Letter and word spacing",
-    choices: [
-      { value: "normal", label: "Normal" },
-      { value: "wider", label: "Wider" },
-      { value: "widest", label: "Widest" },
-    ],
-  },
-  {
-    key: "reading_width",
-    label: "Reading width",
-    choices: [
-      { value: "narrow", label: "Narrow" },
-      { value: "normal", label: "Normal" },
-      { value: "wide", label: "Wide" },
-    ],
-  },
-  {
-    key: "reduce_motion",
-    label: "Reduce motion",
-    choices: [
-      { value: "system", label: "Same as my device" }, // the operating system's "reduce motion" setting
-      { value: "on", label: "On" },
-      { value: "off", label: "Off" },
-    ],
-  },
-  {
-    key: "underline_links",
-    label: "Underline all links",
-    choices: [
-      { value: "off", label: "Off" },
-      { value: "on", label: "On" },
-    ],
-  },
+  { key: "theme", choices: ["system", "light", "dark", "contrast"] }, // system = the device's light/dark mode
+  { key: "text_size", choices: ["small", "normal", "large", "larger"] },
+  { key: "line_spacing", choices: ["normal", "relaxed", "wide"] },
+  { key: "text_spacing", choices: ["normal", "wider", "widest"] }, // letter and word spacing
+  { key: "reading_width", choices: ["narrow", "normal", "wide"] },
+  { key: "reduce_motion", choices: ["system", "on", "off"] }, // system = the device's "reduce motion"
+  { key: "underline_links", choices: ["off", "on"] },
 ];
+
+// The interface languages, each named in its own language. The language button in the header
+// (LanguageButton.jsx) switches between them; the choice is saved with the display settings.
+export const LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "el", label: "Ελληνικά" },
+];
+
+// First visit: Greek when the browser's preferred language is Greek, otherwise English.
+function browserLanguage() {
+  return (navigator.language || "").toLowerCase().startsWith("el") ? "el" : "en";
+}
 
 export const DEFAULT_DISPLAY = {
   theme: "system",
@@ -84,19 +41,19 @@ export const DEFAULT_DISPLAY = {
   reading_width: "normal",
   reduce_motion: "system",
   underline_links: "off",
+  language: browserLanguage(),
 };
 
 const STORAGE_KEY = "agoranote-display";
 
-// Complete, valid settings from `saved`: unknown keys or values are dropped and missing ones get
-// their default, so an old or hand-edited entry can't break the page.
-export function cleanDisplay(saved) {
-  const settings = { ...DEFAULT_DISPLAY };
+// Complete, valid settings from `saved`: unknown keys or values are dropped and missing ones are
+// taken from `base` (normally the defaults), so an old or hand-edited entry can't break the page.
+export function cleanDisplay(saved, base = DEFAULT_DISPLAY) {
+  const settings = { ...base };
   for (const setting of DISPLAY_SETTINGS) {
-    if (setting.choices.some((c) => c.value === saved?.[setting.key])) {
-      settings[setting.key] = saved[setting.key];
-    }
+    if (setting.choices.includes(saved?.[setting.key])) settings[setting.key] = saved[setting.key];
   }
+  if (LANGUAGES.some((l) => l.value === saved?.language)) settings.language = saved.language;
   return settings;
 }
 
@@ -110,10 +67,12 @@ export function loadDisplay() {
   }
 }
 
-// Put the settings on <html>: text_size becomes the attribute data-text-size, and so on.
+// Put the settings on <html>: text_size becomes the attribute data-text-size, and so on. The language
+// becomes the lang attribute, which tells screen readers and the browser which language the page is in.
 export function applyDisplay(settings) {
   for (const [key, value] of Object.entries(settings)) {
-    document.documentElement.setAttribute(`data-${key.replaceAll("_", "-")}`, value);
+    if (key === "language") document.documentElement.lang = value;
+    else document.documentElement.setAttribute(`data-${key.replaceAll("_", "-")}`, value);
   }
 }
 

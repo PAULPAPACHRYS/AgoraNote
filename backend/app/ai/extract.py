@@ -20,10 +20,14 @@ import docx
 import pypdf
 from pypdf.errors import FileNotDecryptedError, PyPdfError
 
+from app.messages import message
+
 
 class ProcessingError(Exception):
-    #problem with the user's material, The message is shown to the user
-    pass
+    # problem with the user's material; `message` (a code plus values, see messages.py) is shown to the user
+    def __init__(self, code: str, **values):
+        super().__init__(code)  # str(exc) is the code, e.g. in the logs
+        self.message = message(code, **values)
 
 
 def clean_text(text: str) -> str:
@@ -51,7 +55,7 @@ def extract_text(path: str, filename: str) -> str:
         # word paragraphs, skipping empty ones. (Tables, headers and footers are not read.)
         paragraphs = [p.text for p in docx.Document(path).paragraphs if p.text.strip()]
         return clean_text("\n\n".join(paragraphs))
-    raise ProcessingError(f'"{filename}" is not a text document.')
+    raise ProcessingError("not_text_document", filename=filename)
 
 
 def _line_key(line: str) -> str:
@@ -85,15 +89,13 @@ def _pdf_text(path: str, filename: str) -> str:
         reader = pypdf.PdfReader(path)
         pages = [page.extract_text() or "" for page in reader.pages]
     except FileNotDecryptedError:
-        raise ProcessingError(f'"{filename}" is password-protected. Please upload an unprotected PDF.')
+        raise ProcessingError("pdf_password", filename=filename)
     except PyPdfError:
-        raise ProcessingError(f'"{filename}" could not be read. Is it a valid PDF?')
+        raise ProcessingError("pdf_unreadable", filename=filename)
     text = "\n\n".join(strip_repeated_lines(pages))
     # Scanned PDFs are just images: pypdf finds (almost) no text in them.
     if len(text.strip()) < 20 * max(1, len(pages)):
-        raise ProcessingError(
-            f'"{filename}": This PDF looks like scanned images; only text-based PDFs are supported for now.'
-        )
+        raise ProcessingError("pdf_scanned", filename=filename)
     return text
 
 
@@ -201,5 +203,5 @@ def prepare_audio(path: str, filename: str, out_dir: str, segment_seconds: int =
     #numbered names sort in playback order
     segments = sorted(glob.glob(os.path.join(out_dir, "segment_*.mp3")))
     if result.returncode != 0 or not segments:
-        raise ProcessingError(f'"{filename}" could not be read as audio or video (is there a sound track?).')
+        raise ProcessingError("audio_unreadable", filename=filename)
     return segments

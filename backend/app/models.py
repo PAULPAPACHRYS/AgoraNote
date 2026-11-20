@@ -53,8 +53,10 @@ class StudySet(Base):
     title: Mapped[str | None] = mapped_column(Text)
     # queued | extracting | transcribing | structuring | generating | ready | failed
     status: Mapped[str] = mapped_column(String(20), default="queued")
-    status_message: Mapped[str] = mapped_column(Text, default="")  # e.g. "Generating chapter 2 of 5"
-    error: Mapped[str | None] = mapped_column(Text)  # user-readable
+    # progress and failure reason as a message code plus values (see messages.py), e.g.
+    # {"code": "generating_chapter", "values": {"position": 2, "total": 5}}; the frontend translates them
+    status_message: Mapped[dict | None] = mapped_column(JSONB)
+    error: Mapped[dict | None] = mapped_column(JSONB)  # e.g. {"code": "pdf_password", "values": {...}}
     source_text: Mapped[str] = mapped_column(Text, default="")  # all files' text joined together
     overview: Mapped[str] = mapped_column(Text, default="")  # short summary of the whole material
     # language code of the material ("el", "en", ...), set while structuring; the frontend puts it in

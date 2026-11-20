@@ -4,6 +4,8 @@
 // With `account` (when signed in), the settings are also saved to the user's account: on opening the
 // app the account's settings replace this browser's (they may come from another device), and every
 // change is sent to the API. When the account has none saved yet, the browser's settings stay.
+// The interface language is saved with these settings (see LanguageButton.jsx): when the account's
+// language differs from this browser's, the page reloads to show it.
 //
 // It follows the WAI-ARIA "disclosure" pattern: the button says whether the panel is open
 // (aria-expanded) and which element it opens (aria-controls). The panel comes right after the button,
@@ -13,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "../api.js";
 import { cleanDisplay, DEFAULT_DISPLAY, DISPLAY_SETTINGS, loadDisplay, saveDisplay } from "../display.js";
+import { language, t } from "../i18n.js";
 
 export default function DisplaySettings({ account = false }) {
   const [open, setOpen] = useState(false);
@@ -25,9 +28,15 @@ export default function DisplaySettings({ account = false }) {
     api("/api/display-settings")
       .then((saved) => {
         if (!saved) return;
-        const fromAccount = cleanDisplay(saved);
+        // anything the account doesn't have yet (e.g. no language chosen) keeps this browser's value
+        const fromAccount = cleanDisplay(saved, loadDisplay());
         setSettings(fromAccount);
         saveDisplay(fromAccount);
+        // Another language: reload to draw everything in it. Only when it was really saved in this
+        // browser (it may block site data), else the reload would load the old language again, forever.
+        if (fromAccount.language !== language && loadDisplay().language === fromAccount.language) {
+          window.location.reload();
+        }
       })
       .catch(() => {}); // e.g. the server can't be reached: keep this browser's settings
   }, [account]);
@@ -39,7 +48,7 @@ export default function DisplaySettings({ account = false }) {
     if (!account) return;
     setSaveError("");
     api("/api/display-settings", { method: "PUT", body: next }).catch(() =>
-      setSaveError("Couldn't save to your account. The settings are still saved in this browser.")
+      setSaveError(t("display.save_error"))
     );
   }
 
@@ -47,8 +56,9 @@ export default function DisplaySettings({ account = false }) {
     update({ ...settings, [key]: value });
   }
 
+  // The language isn't one of the panel's settings, so it stays.
   function reset() {
-    update(DEFAULT_DISPLAY);
+    update({ ...DEFAULT_DISPLAY, language: settings.language });
   }
 
   function close() {
@@ -79,25 +89,25 @@ export default function DisplaySettings({ account = false }) {
         aria-controls="display-settings-panel"
         onClick={() => setOpen(!open)}
       >
-        Display settings
+        {t("display.button")}
       </button>
 
       {/* Always in the page (hidden when closed), so aria-controls points at a real element. */}
       <div id="display-settings-panel" className="display-panel" hidden={!open}>
         {DISPLAY_SETTINGS.map((setting) => (
           <fieldset key={setting.key}>
-            <legend>{setting.label}</legend>
+            <legend>{t(`display.${setting.key}`)}</legend>
             <div className="choices">
               {setting.choices.map((choice) => (
-                <label key={choice.value} className="choice">
+                <label key={choice} className="choice">
                   <input
                     type="radio"
                     name={`display-${setting.key}`}
-                    value={choice.value}
-                    checked={settings[setting.key] === choice.value}
-                    onChange={() => change(setting.key, choice.value)}
+                    value={choice}
+                    checked={settings[setting.key] === choice}
+                    onChange={() => change(setting.key, choice)}
                   />
-                  {choice.label}
+                  {t(`display.${setting.key}.${choice}`)}
                 </label>
               ))}
             </div>
@@ -110,10 +120,10 @@ export default function DisplaySettings({ account = false }) {
         )}
         <div className="actions">
           <button type="button" onClick={reset}>
-            Reset to defaults
+            {t("display.reset")}
           </button>
           <button type="button" className="primary" onClick={close}>
-            Done
+            {t("display.done")}
           </button>
         </div>
       </div>

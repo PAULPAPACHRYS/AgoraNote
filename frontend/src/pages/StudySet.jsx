@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isNotFound } from "../api.js";
 import ChapterList from "../components/ChapterList.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
+import { messageText, t } from "../i18n.js";
 import { setTitle, statusLabel, titleLang } from "../status.js";
 import NotFound from "./NotFound.jsx";
 
@@ -84,17 +85,17 @@ export default function StudySet() {
     return (
       <section>
         <p className="error">{error}</p>
-        <Link to="/">Back to your study sets</Link>
+        <Link to="/">{t("common.back_to_sets")}</Link>
       </section>
     );
   }
-  if (!studySet) return <p className="muted">Loading…</p>;
+  if (!studySet) return <p className="muted">{t("common.loading")}</p>;
 
   const { status } = studySet;
 
   return (
     <section>
-      <p><Link to="/">← Your study sets</Link></p>
+      <p><Link to="/">{t("set.back")}</Link></p>
       <div className="page-head">
         <h1 lang={titleLang(studySet)}>{setTitle(studySet)}</h1>
         <span className={`badge badge-${status}`}>{statusLabel(status)}</span>
@@ -105,15 +106,16 @@ export default function StudySet() {
       {!isFinished(status) && (
         <div className="processing" role="status">
           <span className="spinner" aria-hidden="true" />
-          <span>{studySet.status_message || "Waiting to start…"}</span>
+          {/* status_message: the step as a message code plus values, e.g. "generating_chapter" 2 of 5 */}
+          <span>{studySet.status_message ? messageText(studySet.status_message) : t("set.waiting")}</span>
         </div>
       )}
 
       {status === "failed" && (
         <div className="notice notice-error">
-          <p>{studySet.error || "Processing failed."}</p>
+          <p>{studySet.error ? messageText(studySet.error) : t("set.failed")}</p>
           <button type="button" className="primary" onClick={handleRetry} disabled={retrying}>
-            {retrying ? "Retrying…" : "Retry"}
+            {retrying ? t("set.retrying") : t("set.retry")}
           </button>
         </div>
       )}
@@ -123,15 +125,17 @@ export default function StudySet() {
           {/* lang: the overview and chapter titles are in the material's language (e.g. "el") */}
           {studySet.overview && <p className="overview" lang={studySet.language}>{studySet.overview}</p>}
           <div className="overall-progress">
-            <ProgressBar value={studySet.progress.earned} max={studySet.progress.total} label="Overall progress" />
+            <ProgressBar
+              value={studySet.progress.earned}
+              max={studySet.progress.total}
+              label={t("set.overall_progress")}
+            />
             <p>
-              <strong>
-                {studySet.progress.earned} / {studySet.progress.total} points
-              </strong>{" "}
+              <strong>{t("set.points", { earned: studySet.progress.earned, total: studySet.progress.total })}</strong>{" "}
               · {studySet.progress.percent}%
             </p>
           </div>
-          <h2>Chapters</h2>
+          <h2>{t("common.chapters")}</h2>
           <ChapterList setId={studySet.id} chapters={studySet.chapters} lang={studySet.language} />
         </>
       )}
@@ -139,19 +143,19 @@ export default function StudySet() {
       <div className="danger-zone">
         {confirmingDelete ? (
           <>
-            <p>Delete this study set, its chapters and its uploaded files? This can't be undone.</p>
+            <p>{t("set.delete_confirm")}</p>
             <div className="actions">
               <button type="button" className="danger" onClick={handleDelete} disabled={deleting}>
-                {deleting ? "Deleting…" : "Yes, delete"}
+                {deleting ? t("set.deleting") : t("set.delete_yes")}
               </button>
               <button type="button" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </>
         ) : (
           <button type="button" onClick={() => setConfirmingDelete(true)}>
-            Delete study set
+            {t("set.delete")}
           </button>
         )}
       </div>

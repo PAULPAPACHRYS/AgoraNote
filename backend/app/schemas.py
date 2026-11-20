@@ -45,6 +45,9 @@ class DisplaySettings(BaseModel):
     reading_width: Literal["narrow", "normal", "wide"] = "normal"
     reduce_motion: Literal["system", "on", "off"] = "system"
     underline_links: Literal["off", "on"] = "off"
+    # the interface language (the header's language button, not in the panel). No default: the
+    # browser keeps its own choice (first visit: the browser's language) until one is saved
+    language: Literal["en", "el"] | None = None
 
 
 class StudySetCreated(BaseModel):
@@ -85,6 +88,12 @@ class ChapterScore(BaseModel):
     completed: bool
 
 
+class Message(BaseModel):
+    # a text for the user as a code plus values (see messages.py); the frontend translates it
+    code: str
+    values: dict = {}
+
+
 class StudySetDetail(BaseModel):
     # GET /api/study-sets/{id}: status while processing, overview + chapter list when ready
 
@@ -92,8 +101,8 @@ class StudySetDetail(BaseModel):
     title: str | None
     language: str | None
     status: str
-    status_message: str
-    error: str | None
+    status_message: Message | None
+    error: Message | None
     overview: str
     created_at: datetime
     progress: Progress

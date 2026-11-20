@@ -2,6 +2,7 @@
 // its points bar (with the unlock threshold marked), and a lock note or a "complete" mark.
 import { Link } from "react-router-dom";
 
+import { t } from "../i18n.js";
 import ProgressBar from "./ProgressBar.jsx";
 
 // The ordered chapters of a study set, with each chapter's points and whether its quiz is open.
@@ -24,19 +25,22 @@ export default function ChapterList({ setId, chapters, lang }) {
                     value={chapter.earned}
                     max={chapter.max}
                     marker={chapter.unlock_threshold}
-                    label={`Chapter ${chapter.position} points`}
+                    label={t("chapter.points_label", { n: chapter.position })}
                   />
                   <span className="muted small">
-                    {chapter.earned} / {chapter.max} pts
+                    {t("chapter.points_short", { earned: chapter.earned, max: chapter.max })}
                   </span>
                 </span>
                 {!chapter.quiz_unlocked && previous && (
                   <span className="lock-note small">
-                    <span aria-hidden="true">🔒</span> Earn {previous.unlock_threshold - previous.earned} more
-                    points in Chapter {previous.position} to unlock this quiz
+                    <span aria-hidden="true">🔒</span>{" "}
+                    {t("chapter.unlock_hint", {
+                      count: previous.unlock_threshold - previous.earned,
+                      chapter: previous.position,
+                    })}
                   </span>
                 )}
-                {chapter.completed && <span className="done-note small">✓ Chapter complete</span>}
+                {chapter.completed && <span className="done-note small">{t("chapter.complete")}</span>}
               </span>
             </Link>
           </li>

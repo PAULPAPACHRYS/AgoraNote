@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "../api.js";
+import { language, t } from "../i18n.js";
 
 // Mirrors the server defaults (MAX_FILES_PER_SET, MAX_FILE_MB). The server enforces the real limits.
 const MAX_FILES = 5;
@@ -11,9 +12,10 @@ const MAX_FILE_MB = 200;
 // Which files the file picker offers (the server checks again).
 const ACCEPT = ".txt,.md,.pdf,.docx,.mp3,.m4a,.wav,.ogg,.webm,.mp4";
 
-// 1234567 -> "1.2 MB", 2048 -> "2 KB".
+// 1234567 -> "1.2 MB" ("1,2 MB" in Greek), 2048 -> "2 KB".
 function formatSize(bytes) {
-  return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toLocaleString(language, { maximumFractionDigits: 1 })} MB`;
 }
 
 export default function NewStudySet() {
@@ -25,12 +27,12 @@ export default function NewStudySet() {
   const [submitting, setSubmitting] = useState(false); // disables the buttons while uploading
 
   // Quick checks before uploading, so obvious mistakes don't need a round trip. Returns an error
-  // message, or "" when everything is fine.
+  // message, or "" when everything is fine. The texts are the same as the server's for these checks.
   function checkInput() {
-    if (files.length === 0 && !text.trim()) return "Choose at least one file or paste some text.";
-    if (files.length > MAX_FILES) return `You can upload at most ${MAX_FILES} files.`;
+    if (files.length === 0 && !text.trim()) return t("message.nothing_uploaded");
+    if (files.length > MAX_FILES) return t("message.too_many_files", { max: MAX_FILES });
     const tooBig = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
-    if (tooBig) return `"${tooBig.name}" is larger than ${MAX_FILE_MB} MB.`;
+    if (tooBig) return t("message.file_too_large", { filename: tooBig.name, max_mb: MAX_FILE_MB });
     return "";
   }
 
@@ -62,31 +64,28 @@ export default function NewStudySet() {
 
   return (
     <section>
-      <h1>New study set</h1>
+      <h1>{t("common.new_set")}</h1>
       <form className="form" onSubmit={handleSubmit}>
         <label className="field">
-          <span>Title (optional)</span>
+          <span>{t("new.title_label")}</span>
           <input
             type="text"
             value={title}
             maxLength={200}
-            placeholder="Leave empty to generate one from the material"
+            placeholder={t("new.title_placeholder")}
             onChange={(e) => setTitle(e.target.value)}
           />
         </label>
 
         <label className="field">
-          <span>Files</span>
+          <span>{t("new.files")}</span>
           <input
             type="file"
             multiple
             accept={ACCEPT}
             onChange={(e) => setFiles(Array.from(e.target.files))}
           />
-          <span className="muted small">
-            Text: .txt, .md, .pdf, .docx · Audio/video: .mp3, .m4a, .wav, .ogg, .webm, .mp4 · Up to{" "}
-            {MAX_FILES} files, {MAX_FILE_MB} MB each.
-          </span>
+          <span className="muted small">{t("new.files_help", { max: MAX_FILES, max_mb: MAX_FILE_MB })}</span>
         </label>
 
         {files.length > 0 && (
@@ -100,7 +99,7 @@ export default function NewStudySet() {
         )}
 
         <label className="field">
-          <span>…and/or paste text</span>
+          <span>{t("new.text")}</span>
           <textarea rows={10} value={text} onChange={(e) => setText(e.target.value)} />
         </label>
 
@@ -108,10 +107,10 @@ export default function NewStudySet() {
 
         <div className="actions">
           <button type="submit" className="primary" disabled={submitting}>
-            {submitting ? "Uploading…" : "Create study set"}
+            {submitting ? t("new.uploading") : t("new.create")}
           </button>
           <button type="button" onClick={() => navigate("/")} disabled={submitting}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

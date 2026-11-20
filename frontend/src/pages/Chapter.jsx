@@ -7,39 +7,34 @@
 // straight away, Home/End jump to the first/last tab. Every tab names its panel (aria-controls)
 // and every panel names its tab (aria-labelledby), so screen readers announce which tab is open.
 //
-// The interface is English, but the generated content is in the material's language: those
-// elements get lang={chapter.language} (e.g. "el") so screen readers pronounce them correctly.
+// The interface is in the chosen language (i18n.js), the generated content in the material's language:
+// those elements get lang={chapter.language} (e.g. "el") so screen readers pronounce them correctly.
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { api, isNotFound } from "../api.js";
 import Flashcards from "../components/Flashcards.jsx";
 import Quiz from "../components/Quiz.jsx";
+import { t } from "../i18n.js";
 import NotFound from "./NotFound.jsx";
 
-// The tabs in display order: `id` is what appears in ?tab=, `label` is the button text.
-const TABS = [
-  { id: "summary", label: "Summary" },
-  { id: "concepts", label: "Key concepts" },
-  { id: "practice", label: "Q&A practice" },
-  { id: "aids", label: "Study aids" },
-  { id: "quiz", label: "Quiz" },
-];
+// The tabs in display order: `id` is what appears in ?tab=; the button text is t("chapter.tab.<id>").
+const TABS = [{ id: "summary" }, { id: "concepts" }, { id: "practice" }, { id: "aids" }, { id: "quiz" }];
 
 // Shown on the Quiz tab while this chapter's quiz is locked: what to do to unlock it.
 function QuizLocked({ chapter }) {
   return (
     <div className="locked">
       <p className="locked-title">
-        <span aria-hidden="true">🔒</span> This quiz is locked
+        <span aria-hidden="true">🔒</span> {t("chapter.locked")}
       </p>
       <p>
-        Earn {chapter.points_to_unlock} more points in Chapter {chapter.position - 1} to unlock this quiz.
-        The study materials in the other tabs are always open.
+        {t("chapter.unlock_hint", { count: chapter.points_to_unlock, chapter: chapter.position - 1 })}{" "}
+        {t("chapter.locked_other_tabs")}
       </p>
       {chapter.prev_chapter && (
         <Link to={`/sets/${chapter.study_set_id}/chapters/${chapter.prev_chapter.id}?tab=quiz`}>
-          Go to the Chapter {chapter.position - 1} quiz →
+          {t("chapter.locked_link", { n: chapter.position - 1 })}
         </Link>
       )}
     </div>
@@ -73,7 +68,7 @@ function KeyConcepts({ concepts, lang }) {
 }
 
 // "Study aids" tab: the outline, a review checklist with tick boxes, and memory tips.
-// The section headings are interface text (English); `lang` goes on the generated parts only.
+// The section headings are interface text; `lang` goes on the generated parts only.
 function StudyAids({ aids, lang }) {
   // Ticks are only for this visit; they aren't saved anywhere.
   const [checked, setChecked] = useState({}); // item index -> ticked?
@@ -81,7 +76,7 @@ function StudyAids({ aids, lang }) {
   return (
     <div className="study-aids">
       <section>
-        <h2>Outline</h2>
+        <h2>{t("chapter.outline")}</h2>
         {aids.outline.map((section, i) => (
           <div key={i} className="outline-section" lang={lang}>
             <h3>{section.heading}</h3>
@@ -95,7 +90,7 @@ function StudyAids({ aids, lang }) {
       </section>
 
       <section>
-        <h2>Review checklist</h2>
+        <h2>{t("chapter.checklist")}</h2>
         <ul className="checklist" lang={lang}>
           {aids.review_checklist.map((item, i) => (
             <li key={i}>
@@ -113,7 +108,7 @@ function StudyAids({ aids, lang }) {
       </section>
 
       <section>
-        <h2>Memory tips</h2>
+        <h2>{t("chapter.memory_tips")}</h2>
         <ul lang={lang}>
           {aids.memory_tips.map((tip, i) => (
             <li key={i}>{tip}</li>
@@ -133,7 +128,7 @@ export default function Chapter() {
   const [notFound, setNotFound] = useState(false); // no such chapter (or not this user's): 404 page
 
   // The active tab lives in ?tab= so it can be linked to.
-  const tab = TABS.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab") : "summary";
+  const tab = TABS.some((item) => item.id === searchParams.get("tab")) ? searchParams.get("tab") : "summary";
 
   // Load the chapter whenever the chapter in the URL changes (also via the prev/next links).
   useEffect(() => {
@@ -150,11 +145,11 @@ export default function Chapter() {
     return (
       <section>
         <p className="error">{error}</p>
-        <Link to="/">Back to your study sets</Link>
+        <Link to="/">{t("common.back_to_sets")}</Link>
       </section>
     );
   }
-  if (!chapter) return <p className="muted">Loading…</p>;
+  if (!chapter) return <p className="muted">{t("common.loading")}</p>;
 
   const setUrl = `/sets/${chapter.study_set_id}`;
   // Previous/next chapter links open the same tab the user is on now.
@@ -169,7 +164,7 @@ export default function Chapter() {
   // Keyboard support of the tab row: the arrow keys open the previous/next tab (wrapping around at
   // the ends), Home/End the first/last one, and focus moves along to the tab that was opened.
   function handleTabKeyDown(event) {
-    const index = TABS.findIndex((t) => t.id === tab);
+    const index = TABS.findIndex((item) => item.id === tab);
     const target = {
       ArrowLeft: (index - 1 + TABS.length) % TABS.length,
       ArrowRight: (index + 1) % TABS.length,
@@ -196,30 +191,30 @@ export default function Chapter() {
       <p>
         <Link to={setUrl}>
           ←{" "}
-          {chapter.study_set_title ? <span lang={lang}>{chapter.study_set_title}</span> : "Untitled study set"}
+          {chapter.study_set_title ? <span lang={lang}>{chapter.study_set_title}</span> : t("common.untitled_set")}
         </Link>
       </p>
       <p className="muted small chapter-kicker">
-        Chapter {chapter.position} of {chapter.chapter_count}
+        {t("chapter.of", { n: chapter.position, total: chapter.chapter_count })}
       </p>
       <h1 lang={lang}>{chapter.title}</h1>
 
       {/* Only the active tab has tabIndex 0, so Tab jumps from the tab row straight into the panel;
           the other tabs are reached with the arrow keys. */}
-      <div className="tabs" role="tablist" aria-label="Chapter materials" onKeyDown={handleTabKeyDown}>
-        {TABS.map((t) => (
+      <div className="tabs" role="tablist" aria-label={t("chapter.tabs")} onKeyDown={handleTabKeyDown}>
+        {TABS.map((item) => (
           <button
-            key={t.id}
-            id={`tab-${t.id}`}
+            key={item.id}
+            id={`tab-${item.id}`}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            aria-controls={`panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            className={`tab ${tab === t.id ? "active" : ""}`}
-            onClick={() => openTab(t.id)}
+            aria-selected={tab === item.id}
+            aria-controls={`panel-${item.id}`}
+            tabIndex={tab === item.id ? 0 : -1}
+            className={`tab ${tab === item.id ? "active" : ""}`}
+            onClick={() => openTab(item.id)}
           >
-            {t.label}
+            {t(`chapter.tab.${item.id}`)}
           </button>
         ))}
       </div>
@@ -227,17 +222,17 @@ export default function Chapter() {
       {/* One panel per tab, so every tab's aria-controls points at a real element. Only the active
           panel is visible and filled; the others are empty and hidden. tabIndex={0} lets keyboard
           users reach a panel that has nothing focusable in it (e.g. the summary). */}
-      {TABS.map((t) => (
+      {TABS.map((item) => (
         <div
-          key={t.id}
-          id={`panel-${t.id}`}
+          key={item.id}
+          id={`panel-${item.id}`}
           className="tab-panel"
           role="tabpanel"
-          aria-labelledby={`tab-${t.id}`}
+          aria-labelledby={`tab-${item.id}`}
           tabIndex={0}
-          hidden={tab !== t.id}
+          hidden={tab !== item.id}
         >
-          {tab === t.id && content}
+          {tab === item.id && content}
         </div>
       ))}
 

@@ -9,6 +9,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { api } from "../api.js";
 import Highlight from "../components/Highlight.jsx";
+import { t } from "../i18n.js";
 import { statusLabel } from "../status.js";
 
 // Results arrive best match first; keep that order while grouping them by study set.
@@ -17,10 +18,10 @@ function groupBySet(results) {
   for (const r of results) {
     let group = groups.find((g) => g.id === r.study_set_id);
     if (!group) {
-      // lang only for a real title: the placeholder is English like the rest of the interface
+      // lang only for a real title: the placeholder is in the interface language
       group = {
         id: r.study_set_id,
-        title: r.study_set_title || "Untitled study set",
+        title: r.study_set_title || t("common.untitled_set"),
         lang: r.study_set_title ? r.language : null,
         results: [],
       };
@@ -51,8 +52,8 @@ export default function Search() {
   if (!q) {
     return (
       <section>
-        <h1>Search</h1>
-        <p className="muted">Type a word or phrase in the search box to search all your study sets.</p>
+        <h1>{t("search.title")}</h1>
+        <p className="muted">{t("search.empty")}</p>
       </section>
     );
   }
@@ -61,22 +62,19 @@ export default function Search() {
 
   return (
     <section>
-      <h1>Results for “{q}”</h1>
+      <h1>{t("search.results", { q })}</h1>
       {error && <p className="error">{error}</p>}
-      {!results && !error && <p className="muted">Searching…</p>}
+      {!results && !error && <p className="muted">{t("search.searching")}</p>}
       {nothingFound && (
         <>
-          <p className="muted">
-            No study sets or chapters match “{q}”. Try a different word, or check the spelling (accents
-            count in Greek).
-          </p>
-          <Link to="/" className="button">Back to home screen</Link>
+          <p className="muted">{t("search.nothing", { q })}</p>
+          <Link to="/" className="button">{t("search.home")}</Link>
         </>
       )}
 
       {results && results.study_sets.length > 0 && (
         <>
-          <h2>Study sets</h2>
+          <h2>{t("search.sets")}</h2>
           <ul className="results">
             {results.study_sets.map((s) => (
               <li key={s.id}>
@@ -93,7 +91,7 @@ export default function Search() {
         </>
       )}
 
-      {results && results.chapters.length > 0 && <h2>Chapters</h2>}
+      {results && results.chapters.length > 0 && <h2>{t("common.chapters")}</h2>}
       {results &&
         groupBySet(results.chapters).map((group) => (
           <div key={group.id} className="result-group">
@@ -107,7 +105,10 @@ export default function Search() {
                 <li key={r.chapter_id}>
                   <Link to={`/sets/${r.study_set_id}/chapters/${r.chapter_id}`} className="result">
                     <span className="result-title">
-                      Chapter {r.chapter_position}: <span lang={r.language}>{r.chapter_title}</span>
+                      {t("search.chapter", {
+                        n: r.chapter_position,
+                        title: <span lang={r.language}>{r.chapter_title}</span>,
+                      })}
                     </span>
                     {/* the snippet is the chapter's own text, in the material's language */}
                     <span className="result-snippet" lang={r.language}>

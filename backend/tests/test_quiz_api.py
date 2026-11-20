@@ -130,7 +130,10 @@ def test_locked_quiz_returns_403_until_the_previous_chapter_reaches_the_threshol
 
     locked = client.get(f"/api/chapters/{second['id']}/quiz")
     assert locked.status_code == 403
-    assert f"Chapter {first['position']}" in locked.json()["detail"]
+    # the reason as a message code plus values, which the frontend turns into English or Greek
+    assert locked.json()["detail"] == {
+        "code": "quiz_locked", "values": {"count": first["unlock_threshold"], "chapter": first["position"]},
+    }
 
     # Answering a question of a locked chapter is refused too.
     with SessionLocal() as db:

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import { api } from "../api.js";
 import ProgressBar from "../components/ProgressBar.jsx";
+import { formatDate, t } from "../i18n.js";
 import { setTitle, statusLabel, titleLang } from "../status.js";
 
 export default function Dashboard() {
@@ -20,25 +21,19 @@ export default function Dashboard() {
   return (
     <section>
       <div className="page-head">
-        <h1>Your study sets</h1>
-        <Link to="/new" className="button primary">New study set</Link>
+        <h1>{t("dashboard.title")}</h1>
+        <Link to="/new" className="button primary">{t("common.new_set")}</Link>
       </div>
 
       {error && <p className="error">{error}</p>}
-      {!sets && !error && <p className="muted">Loading…</p>}
+      {!sets && !error && <p className="muted">{t("common.loading")}</p>}
 
       {sets && sets.length === 0 && (
         <div className="empty">
-          <h2>Welcome to AgoraNote</h2>
-          <p>
-            Upload lecture notes or a lecture recording, or paste some text. AgoraNote splits it into
-            chapters and writes a summary, key concepts, practice questions and study aids for each one.
-          </p>
-          <p>
-            Then test yourself with chapter quizzes: correct answers earn points, and enough points
-            unlock the next chapter's quiz.
-          </p>
-          <Link to="/new" className="button primary">Create your first study set</Link>
+          <h2>{t("welcome.title")}</h2>
+          <p>{t("welcome.intro")}</p>
+          <p>{t("welcome.quizzes")}</p>
+          <Link to="/new" className="button primary">{t("welcome.first_set")}</Link>
         </div>
       )}
 
@@ -51,11 +46,11 @@ export default function Dashboard() {
                 <span className={`badge badge-${s.status}`}>{statusLabel(s.status)}</span>
                 {s.status === "ready" && (
                   <span className="card-progress">
-                    <ProgressBar small value={s.progress.earned} max={s.progress.total} label="Progress" />
+                    <ProgressBar small value={s.progress.earned} max={s.progress.total} label={t("dashboard.progress")} />
                     <span className="small">{s.progress.percent}%</span>
                   </span>
                 )}
-                <span className="muted small">{new Date(s.created_at).toLocaleDateString()}</span>
+                <span className="muted small">{formatDate(s.created_at)}</span>
               </Link>
             </li>
           ))}

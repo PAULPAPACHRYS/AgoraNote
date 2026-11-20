@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.gamification import load_chapter_scores, newly_unlocked, points_to_unlock, progress
+from app.messages import message
 from app.models import Chapter, Question, StudySet, Topic, User
 from app.routes.chapters import get_owned_chapter
 from app.schemas import AnswerIn, AnswerOut, QuizState
@@ -34,7 +35,8 @@ def require_unlocked(scores: list[dict], chapter: Chapter) -> dict:
         needed = points_to_unlock(scores, chapter.id)
         raise HTTPException(
             status_code=403,
-            detail=f"Earn {needed} more points in Chapter {chapter.position - 1} to unlock this quiz.",
+            # count: the number of points, which picks "1 point" or "N points" in the frontend
+            detail=message("quiz_locked", count=needed, chapter=chapter.position - 1),
         )
     return score
 
@@ -90,9 +92,9 @@ def answer_question(
         .with_for_update(of=Question)
     )
     if question is None:
-        raise HTTPException(status_code=404, detail="Question not found.")
+        raise HTTPException(status_code=404, detail=message("question_not_found"))
     if question.status != "active":
-        raise HTTPException(status_code=409, detail="This question has already been answered.")
+        raise HTTPException(status_code=409, detail=message("already_answered"))
 
     topic = question.topic
     chapter = topic.chapter

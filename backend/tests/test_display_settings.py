@@ -10,6 +10,7 @@ SETTINGS = {
     "reading_width": "narrow",
     "reduce_motion": "on",
     "underline_links": "on",
+    "language": "el",
 }
 
 
@@ -34,6 +35,7 @@ def test_missing_settings_get_their_defaults(client):
     # e.g. settings saved before a new setting was added to the panel
     saved = client.put("/api/display-settings", json={"theme": "dark"}).json()
     assert saved["theme"] == "dark" and saved["text_size"] == "normal" and saved["reduce_motion"] == "system"
+    assert saved["language"] is None  # no language chosen yet: the browser keeps its own
 
 
 def test_settings_belong_to_their_own_user(client):

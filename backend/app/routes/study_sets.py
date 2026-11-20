@@ -25,6 +25,7 @@ from app import config, storage
 from app.auth import get_current_user
 from app.db import get_db
 from app.gamification import load_chapter_scores, progress
+from app.messages import message
 from app.models import SourceFile, StudySet, User
 from app.schemas import StudySetCreated, StudySetDetail, StudySetListItem
 from app.worker import process_study_set
@@ -54,7 +55,7 @@ def get_owned_set(db: Session, user: User, set_id: int) -> StudySet:
     #The study set if it belongs to this user, 404 otherwise (don't reveal others' sets exist)
     study_set = db.scalar(select(StudySet).where(StudySet.id == set_id, StudySet.user_id == user.id))
     if study_set is None:
-        raise HTTPException(status_code=404, detail="Study set not found.")
+        raise HTTPException(status_code=404, detail=message("study_set_not_found"))
     return study_set
 
 
@@ -72,11 +73,11 @@ def validate_upload(upload: UploadFile) -> str:
         kind = "audio"
     else:
         allowed = ", ".join(sorted(TEXT_EXTENSIONS | AUDIO_EXTENSIONS))
-        raise HTTPException(status_code=400, detail=f'"{name}" has an unsupported type. Allowed: {allowed}.')
+        raise HTTPException(status_code=400, detail=message("unsupported_type", filename=name, allowed=allowed))
     if not upload.size:
-        raise HTTPException(status_code=400, detail=f'"{name}" is empty.')
+        raise HTTPException(status_code=400, detail=message("file_empty", filename=name))
     if upload.size > config.MAX_FILE_MB * 1024 * 1024:
-        raise HTTPException(status_code=400, detail=f'"{name}" is larger than {config.MAX_FILE_MB} MB.')
+        raise HTTPException(status_code=400, detail=message("file_too_large", filename=name, max_mb=config.MAX_FILE_MB))
     return kind
 
 
@@ -89,7 +90,7 @@ def enqueue_processing(db: Session, study_set: StudySet) -> None:
     except Exception:
         log.exception("Could not enqueue study set %s", study_set.id)
         study_set.status = "failed"
-        study_set.error = "Processing could not be started. Please try again."
+        study_set.error = message("start_failed")
         db.commit()
 
 
@@ -117,15 +118,13 @@ def create_study_set(
 
     # validate everything before storing anything
     if not files and not text:
-        raise HTTPException(status_code=400, detail="Upload at least one file or paste some text.")
+        raise HTTPException(status_code=400, detail=message("nothing_uploaded"))
     if len(files) > config.MAX_FILES_PER_SET:
-        raise HTTPException(status_code=400, detail=f"You can upload at most {config.MAX_FILES_PER_SET} files.")
+        raise HTTPException(status_code=400, detail=message("too_many_files", max=config.MAX_FILES_PER_SET))
     if len(text) > config.MAX_INPUT_CHARS:
-        raise HTTPException(
-            status_code=400, detail=f"Pasted text is too long (max {config.MAX_INPUT_CHARS:,} characters)."
-        )
+        raise HTTPException(status_code=400, detail=message("text_too_long", max=config.MAX_INPUT_CHARS))
     if title and len(title) > MAX_TITLE_CHARS:
-        raise HTTPException(status_code=400, detail=f"Title is too long (max {MAX_TITLE_CHARS} characters).")
+        raise HTTPException(status_code=400, detail=message("title_too_long", max=MAX_TITLE_CHARS))
     kinds = [validate_upload(f) for f in files]
 
     study_set = StudySet(user_id=user.id, title=title, status="queued")
@@ -205,9 +204,9 @@ def retry_study_set(set_id: int, user: User = Depends(get_current_user), db: Ses
     # "Retry" button: reset a failed set to "queued" and run the processing task again
     study_set = get_owned_set(db, user, set_id)
     if study_set.status != "failed":
-        raise HTTPException(status_code=409, detail="Only a failed study set can be retried.")
+        raise HTTPException(status_code=409, detail=message("only_failed_retry"))
     study_set.status = "queued"
-    study_set.status_message = ""
+    study_set.status_message = None
     study_set.error = None
     db.commit()
     enqueue_processing(db, study_set)

@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.db import get_db
+from app.messages import message
 from app.models import User
 
 # in dev mode every request is this one user, so the app works without an auth provider
@@ -94,16 +95,16 @@ def get_current_user(
     # 401 = "not signed in"; the WWW-Authenticate header tells clients a Bearer token is expected.
     scheme, _, token = (authorization or "").partition(" ")
     if scheme.lower() != "bearer" or not token:
-        raise HTTPException(status_code=401, detail="Please sign in.", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(status_code=401, detail=message("sign_in_required"), headers={"WWW-Authenticate": "Bearer"})
     try:
         claims = verify_clerk_token(token)
     except jwt.PyJWKClientConnectionError:
         # Clerk's public keys couldn't be downloaded (network problem or wrong AUTH_JWKS_URL).
-        raise HTTPException(status_code=503, detail="The sign-in service can't be reached. Please try again.")
+        raise HTTPException(status_code=503, detail=message("sign_in_unreachable"))
     except jwt.PyJWTError:
         # Bad signature, expired, wrong issuer or site, malformed...: all just mean "not signed in".
         raise HTTPException(
-            status_code=401, detail="Your session has expired. Please sign in again.",
+            status_code=401, detail=message("session_expired"),
             headers={"WWW-Authenticate": "Bearer"},
         )
     return get_or_create_user(db, claims["sub"], claims.get("email"))

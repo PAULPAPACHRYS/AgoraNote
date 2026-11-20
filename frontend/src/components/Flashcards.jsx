@@ -1,8 +1,10 @@
 // Flashcards.jsx: the "Q&A practice" tab of a chapter.
 import { useEffect, useState } from "react";
 
+import { t } from "../i18n.js";
+
 // Q&A practice: question on the front; click, tap or Space reveals the answer. No points here.
-// `lang` is the material's language: it goes on the card's text, not on the English labels.
+// `lang` is the material's language: it goes on the card's text, not on the interface's labels.
 export default function Flashcards({ cards, lang }) {
   const [index, setIndex] = useState(0); // which card is shown
   const [revealed, setRevealed] = useState(false); // showing the answer side?
@@ -20,7 +22,7 @@ export default function Flashcards({ cards, lang }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  if (cards.length === 0) return <p className="muted">No practice questions for this chapter.</p>;
+  if (cards.length === 0) return <p className="muted">{t("flashcards.none")}</p>;
 
   // Previous (-1) / next (+1) card; a new card always starts on the question side.
   function go(step) {
@@ -37,22 +39,20 @@ export default function Flashcards({ cards, lang }) {
         className={`flashcard ${revealed ? "revealed" : ""}`}
         onClick={() => setRevealed((r) => !r)}
       >
-        <span className="flashcard-label">{revealed ? "Answer" : "Question"}</span>
+        <span className="flashcard-label">{revealed ? t("flashcards.answer") : t("flashcards.question")}</span>
         <span className="flashcard-text" lang={lang}>{revealed ? card.answer : card.question}</span>
         <span className="flashcard-hint muted small">
-          {revealed ? "Click or press Space to see the question" : "Click or press Space to reveal the answer"}
+          {revealed ? t("flashcards.hint_back") : t("flashcards.hint_reveal")}
         </span>
       </button>
 
       <div className="flashcard-nav">
         <button type="button" onClick={() => go(-1)} disabled={index === 0}>
-          ← Previous
+          {t("flashcards.previous")}
         </button>
-        <span className="muted">
-          Card {index + 1} of {cards.length}
-        </span>
+        <span className="muted">{t("flashcards.card", { n: index + 1, total: cards.length })}</span>
         <button type="button" onClick={() => go(1)} disabled={index === cards.length - 1}>
-          Next →
+          {t("flashcards.next")}
         </button>
       </div>
     </div>
