@@ -13,7 +13,7 @@ export default function Privacy() {
     <article className="prose privacy">
       {language === "el" ? <PrivacyGreek /> : <PrivacyEnglish />}
       <p className="muted small">
-        {language === "el" ? "Τελευταία ενημέρωση: 19 Νοεμβρίου 2026" : "Last updated: 19 November 2026"}
+        {language === "el" ? "Τελευταία ενημέρωση: 20 Νοεμβρίου 2026" : "Last updated: 20 November 2026"}
       </p>
       <p>
         <Link to="/">{language === "el" ? "Πίσω στο AgoraNote" : "Back to AgoraNote"}</Link>
@@ -58,7 +58,11 @@ function PrivacyEnglish() {
           questions;
         </li>
         <li>your quiz answers, points and progress;</li>
-        <li>your display settings (theme, text size and so on) and your language.</li>
+        <li>your display settings (theme, text size and so on) and your language;</li>
+        <li>
+          when you created each study set in the last 24 hours, for the daily limit on new study sets.
+          This is kept for 24 hours even if you delete the set.
+        </li>
       </ul>
       <p>
         Other AgoraNote users can't see any of it. As with any website, the people who run AgoraNote can
@@ -147,7 +151,11 @@ function PrivacyGreek() {
           μελέτης και ερωτήσεις κουίζ·
         </li>
         <li>τις απαντήσεις σας στα κουίζ, τους πόντους και την πρόοδό σας·</li>
-        <li>τις ρυθμίσεις εμφάνισης (θέμα, μέγεθος κειμένου κ.λπ.) και τη γλώσσα σας.</li>
+        <li>τις ρυθμίσεις εμφάνισης (θέμα, μέγεθος κειμένου κ.λπ.) και τη γλώσσα σας·</li>
+        <li>
+          πότε δημιουργήσατε κάθε σετ μελέτης τις τελευταίες 24 ώρες, για το ημερήσιο όριο νέων σετ
+          μελέτης. Αυτό φυλάσσεται για 24 ώρες ακόμη κι αν διαγράψετε το σετ.
+        </li>
       </ul>
       <p>
         Οι άλλοι χρήστες του AgoraNote δεν μπορούν να δουν τίποτα από αυτά. Όπως σε κάθε ιστότοπο, όσοι

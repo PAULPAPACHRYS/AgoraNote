@@ -1,10 +1,11 @@
 // NewStudySet.jsx: the upload form ("/new"): optional title, files and/or pasted text.
 // After a successful upload it goes straight to the new set's page, which shows the progress.
-import { useState } from "react";
+// Above the form: the daily limit (how many new sets are left, or when the next one is possible).
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "../api.js";
-import { language, t } from "../i18n.js";
+import { formatDateTime, language, t } from "../i18n.js";
 
 // Mirrors the server defaults (MAX_FILES_PER_SET, MAX_FILE_MB). The server enforces the real limits.
 const MAX_FILES = 5;
@@ -18,6 +19,21 @@ function formatSize(bytes) {
   return `${(bytes / 1024 / 1024).toLocaleString(language, { maximumFractionDigits: 1 })} MB`;
 }
 
+// The daily limit above the form. `usage` is GET /api/study-sets/usage: {limit, used, next_free_at};
+// limit 0 = no limit, next_free_at is only set when the limit is reached.
+function DailyLimit({ usage }) {
+  if (!usage || usage.limit === 0) return null;
+  if (usage.next_free_at) {
+    return (
+      <div className="limit-reached">
+        <p className="locked-title">{t("new.limit_reached_title")}</p>
+        <p>{t("new.limit_reached", { max: usage.limit, time: formatDateTime(usage.next_free_at) })}</p>
+      </div>
+    );
+  }
+  return <p className="muted small">{t("new.limit_left", { count: usage.limit - usage.used, max: usage.limit })}</p>;
+}
+
 export default function NewStudySet() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -25,6 +41,18 @@ export default function NewStudySet() {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false); // disables the buttons while uploading
+  const [usage, setUsage] = useState(null); // the daily limit; null = not loaded (yet)
+
+  // Ask how many new sets are left. If that fails the form still works: the server checks the limit anyway.
+  function loadUsage() {
+    api("/api/study-sets/usage").then(setUsage).catch(() => setUsage(null));
+  }
+
+  useEffect(() => {
+    loadUsage();
+  }, []); // once, when the page opens
+
+  const limitReached = !!(usage && usage.next_free_at);
 
   // Quick checks before uploading, so obvious mistakes don't need a round trip. Returns an error
   // message, or "" when everything is fine. The texts are the same as the server's for these checks.
@@ -59,12 +87,14 @@ export default function NewStudySet() {
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
+      loadUsage(); // e.g. the limit was reached in another tab: show when the next set is possible
     }
   }
 
   return (
     <section>
       <h1>{t("common.new_set")}</h1>
+      <DailyLimit usage={usage} />
       <form className="form" onSubmit={handleSubmit}>
         <label className="field">
           <span>{t("new.title_label")}</span>
@@ -106,7 +136,7 @@ export default function NewStudySet() {
         {error && <p className="error">{error}</p>}
 
         <div className="actions">
-          <button type="submit" className="primary" disabled={submitting}>
+          <button type="submit" className="primary" disabled={submitting || limitReached}>
             {submitting ? t("new.uploading") : t("new.create")}
           </button>
           <button type="button" onClick={() => navigate("/")} disabled={submitting}>

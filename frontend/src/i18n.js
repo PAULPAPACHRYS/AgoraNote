@@ -50,6 +50,11 @@ export function formatDate(value) {
   return new Date(value).toLocaleDateString(language);
 }
 
+// A date and time the local way, e.g. "20 Nov 2026, 14:32" ("20 Νοε 2026, 14:32" in Greek).
+export function formatDateTime(value) {
+  return new Date(value).toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
+}
+
 const TEXTS = {
   en: {
     // shared
@@ -130,6 +135,11 @@ const TEXTS = {
     "new.text": "…and/or paste text",
     "new.uploading": "Uploading…",
     "new.create": "Create study set",
+    "new.limit_left": "You can create {count} more study sets right now (the limit is {max} in 24 hours).",
+    "new.limit_left_one": "You can create 1 more study set right now (the limit is {max} in 24 hours).",
+    "new.limit_reached_title": "Daily limit reached",
+    "new.limit_reached":
+      "You have created {max} study sets in the last 24 hours, the most allowed. You can create the next one from {time}.",
 
     // study set page
     "set.back": "← Your study sets",
@@ -256,6 +266,7 @@ const TEXTS = {
     "message.too_many_files": "You can upload at most {max} files.",
     "message.text_too_long": "Pasted text is too long (max {max} characters).",
     "message.title_too_long": "Title is too long (max {max} characters).",
+    "message.daily_limit_reached": "You can create at most {max} study sets in 24 hours.",
     "message.only_failed_retry": "Only a failed study set can be retried.",
     "message.sign_in_required": "Please sign in.",
     "message.session_expired": "Your session has expired. Please sign in again.",
@@ -336,6 +347,10 @@ const TEXTS = {
     "new.text": "…ή/και επικολλήστε κείμενο",
     "new.uploading": "Ανέβασμα…",
     "new.create": "Δημιουργία σετ μελέτης",
+    "new.limit_left": "Μπορείτε να δημιουργήσετε ακόμη {count} σετ μελέτης τώρα (το όριο είναι {max} σε 24 ώρες).",
+    "new.limit_reached_title": "Συμπληρώθηκε το ημερήσιο όριο",
+    "new.limit_reached":
+      "Δημιουργήσατε {max} σετ μελέτης τις τελευταίες 24 ώρες, το μέγιστο επιτρεπτό. Μπορείτε να δημιουργήσετε το επόμενο από {time}.",
 
     "set.back": "← Τα σετ μελέτης σας",
     "set.waiting": "Αναμονή για έναρξη…",
@@ -457,6 +472,7 @@ const TEXTS = {
     "message.too_many_files": "Μπορείτε να ανεβάσετε έως {max} αρχεία.",
     "message.text_too_long": "Το κείμενο που επικολλήσατε είναι πολύ μεγάλο (έως {max} χαρακτήρες).",
     "message.title_too_long": "Ο τίτλος είναι πολύ μεγάλος (έως {max} χαρακτήρες).",
+    "message.daily_limit_reached": "Μπορείτε να δημιουργήσετε έως {max} σετ μελέτης σε 24 ώρες.",
     "message.only_failed_retry": "Μόνο ένα σετ μελέτης που απέτυχε μπορεί να δοκιμαστεί ξανά.",
     "message.sign_in_required": "Συνδεθείτε.",
     "message.session_expired": "Η σύνδεσή σας έληξε. Συνδεθείτε ξανά.",

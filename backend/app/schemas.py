@@ -56,6 +56,15 @@ class StudySetCreated(BaseModel):
     id: int
 
 
+class StudySetUsage(BaseModel):
+    # GET /api/study-sets/usage: the daily limit for the New study set page. limit 0 = no limit
+    # next_free_at is set only when the limit is reached: when the next new set is allowed again
+
+    limit: int
+    used: int  # sets created in the last 24 hours, deleted ones included
+    next_free_at: datetime | None
+
+
 class Progress(BaseModel):
     # points earned vs. points available across all chapters (the overall progress bar)
 

@@ -5,6 +5,7 @@ How the tables relate (each arrow is "has many"; deleting a parent deletes its c
 
     User ─> StudySet ─> SourceFile (the uploaded files)
                       ─> Chapter ──> Topic ──> Question
+         ─> StudySetCreation (when each study set was made, for the daily limit)
 
 - **StudySet** is one upload (one or more files, or pasted text) and its processing status
 - **Chapter** holds the study materials the AI wrote for one part of the material
@@ -77,6 +78,18 @@ class StudySet(Base):
         back_populates="study_set", order_by="Chapter.position",
         cascade="all, delete-orphan", passive_deletes=True,
     )
+
+
+class StudySetCreation(Base):
+    # the time a user created a study set, for the daily limit (config.MAX_STUDY_SETS_PER_DAY)
+    # kept apart from StudySet so deleting a set doesn't give its slot back. Only the last 24 hours
+    # count, so older rows are removed on the user's next upload (see routes/study_sets.py)
+
+    __tablename__ = "study_set_creations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class SourceFile(Base):

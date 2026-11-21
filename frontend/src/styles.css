@@ -820,7 +820,8 @@ textarea {
 
 /* Quiz */
 
-.locked {
+.locked,
+.limit-reached {
   padding: 1.25rem;
   background: var(--surface);
   border: 1px dashed var(--muted);

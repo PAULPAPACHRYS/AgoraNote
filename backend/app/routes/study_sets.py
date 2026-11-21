@@ -3,6 +3,7 @@ Endpoints for study sets: create (upload), list, view, retry and delete
 
     POST   /api/study-sets              upload files and/or pasted text -> {"id": ...}
     GET    /api/study-sets              the dashboard list
+    GET    /api/study-sets/usage        the daily limit: how many new sets are left
     GET    /api/study-sets/{id}         one set: status while processing, chapters when ready
     POST   /api/study-sets/{id}/retry   run processing again after a failure
     DELETE /api/study-sets/{id}         delete the set, its rows and its stored files
@@ -15,10 +16,11 @@ import io
 import logging
 import os
 import re
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app import config, storage
@@ -26,8 +28,8 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.gamification import load_chapter_scores, progress
 from app.messages import message
-from app.models import SourceFile, StudySet, User
-from app.schemas import StudySetCreated, StudySetDetail, StudySetListItem
+from app.models import SourceFile, StudySet, StudySetCreation, User
+from app.schemas import StudySetCreated, StudySetDetail, StudySetListItem, StudySetUsage
 from app.worker import process_study_set
 
 log = logging.getLogger(__name__)
@@ -38,6 +40,8 @@ router = APIRouter(prefix="/api/study-sets")
 TEXT_EXTENSIONS = {".txt", ".md", ".pdf", ".docx"}
 AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".webm", ".mp4"}
 MAX_TITLE_CHARS = 200
+# the daily limit counts the sets created in the last 24 hours (a rolling window, the same in every time zone)
+DAY = timedelta(hours=24)
 
 
 def safe_filename(name: str) -> str:
@@ -57,6 +61,26 @@ def get_owned_set(db: Session, user: User, set_id: int) -> StudySet:
     if study_set is None:
         raise HTTPException(status_code=404, detail=message("study_set_not_found"))
     return study_set
+
+
+def daily_usage(db: Session, user: User) -> dict:
+    """
+    the daily limit for this user (StudySetUsage): how many sets they created in the last 24 hours,
+    deleted ones included, and when the limit is reached, when the next one is allowed again
+    The database's clock (now()) is used, the same clock that stamps created_at
+    """
+    limit = config.MAX_STUDY_SETS_PER_DAY
+    times = db.scalars(
+        select(StudySetCreation.created_at)
+        .where(StudySetCreation.user_id == user.id, StudySetCreation.created_at > func.now() - DAY)
+        .order_by(StudySetCreation.created_at)
+    ).all()
+    next_free_at = None
+    if limit > 0 and len(times) >= limit:
+        # a slot frees up when a counted set turns 24 hours old. Usually that is the oldest one;
+        # if the limit was lowered (more sets counted than allowed), enough of them must drop out first
+        next_free_at = times[len(times) - limit] + DAY
+    return {"limit": limit, "used": len(times), "next_free_at": next_free_at}
 
 
 def validate_upload(upload: UploadFile) -> str:
@@ -127,8 +151,21 @@ def create_study_set(
         raise HTTPException(status_code=400, detail=message("title_too_long", max=MAX_TITLE_CHARS))
     kinds = [validate_upload(f) for f in files]
 
+    # the daily limit. Locking the user's row first makes two uploads sent at the same moment take
+    # turns (the lock is held until the commit below), so they can't both take the last free slot
+    db.execute(select(User.id).where(User.id == user.id).with_for_update())
+    usage = daily_usage(db, user)
+    if usage["next_free_at"] is not None:
+        raise HTTPException(status_code=429, detail=message("daily_limit_reached", max=usage["limit"]))
+    # only the last 24 hours count, so older creation times aren't needed any more
+    db.execute(delete(StudySetCreation).where(
+        StudySetCreation.user_id == user.id, StudySetCreation.created_at <= func.now() - DAY
+    ))
+
     study_set = StudySet(user_id=user.id, title=title, status="queued")
     db.add(study_set)
+    # counted only if the upload succeeds: the rollback below removes it together with the set
+    db.add(StudySetCreation(user_id=user.id))
     db.flush()  # assigns study_set.id, needed for the storage keys
 
     # pasted text becomes a .txt source file, so every input follows the same path later
@@ -191,6 +228,13 @@ def list_study_sets(user: User = Depends(get_current_user), db: Session = Depend
         }
         for s in sets
     ]
+
+
+# declared before "/{set_id}": routes are tried in order, and "usage" isn't a set id
+@router.get("/usage", response_model=StudySetUsage)
+def get_usage(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # the New study set page shows how many sets are left today, or when the next one is possible
+    return daily_usage(db, user)
 
 
 @router.get("/{set_id}", response_model=StudySetDetail)

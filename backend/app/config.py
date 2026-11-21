@@ -91,6 +91,9 @@ MAX_FILES_PER_SET = int(os.environ.get("MAX_FILES_PER_SET", "5"))
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "200"))
 # upper limit for the combined text of a study set (all files, after extraction/transcription)
 MAX_INPUT_CHARS = int(os.environ.get("MAX_INPUT_CHARS", "200000"))
+# at most this many new study sets per user in any 24 hours (deleted sets still count, retries don't),
+# so one account can't keep the AI busy (or, with a hosted API, run up its cost); 0 = no limit
+MAX_STUDY_SETS_PER_DAY = int(os.environ.get("MAX_STUDY_SETS_PER_DAY", "5"))
 
 # --- game constants ----------------------------------
 
