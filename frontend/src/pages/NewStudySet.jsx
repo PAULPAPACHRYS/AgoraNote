@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "../api.js";
-import { formatDateTime, language, t } from "../i18n.js";
+import DailyLimit from "../components/DailyLimit.jsx";
+import { language, t } from "../i18n.js";
 
 // Mirrors the server defaults (MAX_FILES_PER_SET, MAX_FILE_MB). The server enforces the real limits.
 const MAX_FILES = 5;
@@ -17,21 +18,6 @@ const ACCEPT = ".txt,.md,.pdf,.docx,.mp3,.m4a,.wav,.ogg,.webm,.mp4";
 function formatSize(bytes) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
   return `${(bytes / 1024 / 1024).toLocaleString(language, { maximumFractionDigits: 1 })} MB`;
-}
-
-// The daily limit above the form. `usage` is GET /api/study-sets/usage: {limit, used, next_free_at};
-// limit 0 = no limit, next_free_at is only set when the limit is reached.
-function DailyLimit({ usage }) {
-  if (!usage || usage.limit === 0) return null;
-  if (usage.next_free_at) {
-    return (
-      <div className="limit-reached">
-        <p className="locked-title">{t("new.limit_reached_title")}</p>
-        <p>{t("new.limit_reached", { max: usage.limit, time: formatDateTime(usage.next_free_at) })}</p>
-      </div>
-    );
-  }
-  return <p className="muted small">{t("new.limit_left", { count: usage.limit - usage.used, max: usage.limit })}</p>;
 }
 
 export default function NewStudySet() {

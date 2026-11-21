@@ -1,8 +1,10 @@
 // Dashboard.jsx: the home page ("/"): all of the user's study sets as cards, or a welcome text.
+// Under the heading: the daily limit on new study sets (components/DailyLimit.jsx).
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api.js";
+import DailyLimit from "../components/DailyLimit.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
 import { formatDate, t } from "../i18n.js";
 import { setTitle, statusLabel, titleLang } from "../status.js";
@@ -10,12 +12,17 @@ import { setTitle, statusLabel, titleLang } from "../status.js";
 export default function Dashboard() {
   const [sets, setSets] = useState(null); // null = still loading, [] = the user has no sets yet
   const [error, setError] = useState("");
+  const [usage, setUsage] = useState(null); // the daily limit; null = not loaded (yet)
 
   // Load the list once when the page opens (the empty [] means "only on the first render").
   useEffect(() => {
     api("/api/study-sets")
       .then(setSets)
       .catch((err) => setError(err.message));
+    // if this fails, the limit is just not shown (the New study set page and the server still check it)
+    api("/api/study-sets/usage")
+      .then(setUsage)
+      .catch(() => setUsage(null));
   }, []);
 
   return (
@@ -24,6 +31,7 @@ export default function Dashboard() {
         <h1>{t("dashboard.title")}</h1>
         <Link to="/new" className="button primary">{t("common.new_set")}</Link>
       </div>
+      <DailyLimit usage={usage} />
 
       {error && <p className="error">{error}</p>}
       {!sets && !error && <p className="muted">{t("common.loading")}</p>}

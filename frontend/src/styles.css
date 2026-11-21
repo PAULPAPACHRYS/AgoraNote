@@ -828,6 +828,11 @@ textarea {
   border-radius: var(--radius);
 }
 
+/* the daily limit box (dashboard, New study set page) */
+.limit-reached {
+  margin-bottom: 1rem;
+}
+
 .locked-title,
 .feedback-title {
   font-weight: 700;
