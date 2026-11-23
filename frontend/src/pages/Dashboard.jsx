@@ -36,6 +36,7 @@ export default function Dashboard() {
       {error && <p className="error">{error}</p>}
       {!sets && !error && <p className="muted">{t("common.loading")}</p>}
 
+      {/* No study sets yet: a welcome text that explains the app, instead of an empty list. */}
       {sets && sets.length === 0 && (
         <div className="empty">
           <h2>{t("welcome.title")}</h2>
@@ -45,6 +46,10 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* One card per study set, newest first (the API's order). The whole card is a link to the set.
+          It shows the title (in the material's language), the status badge, the points progress
+          (only once the set is ready: before that there are no chapters to earn points in) and the
+          date it was created. */}
       {sets && sets.length > 0 && (
         <ul className="cards">
           {sets.map((s) => (

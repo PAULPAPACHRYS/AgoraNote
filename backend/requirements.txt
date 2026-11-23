@@ -1,12 +1,15 @@
-fastapi==0.141.1
-uvicorn[standard]==0.54.0
-sqlalchemy==2.1.1
-psycopg[binary]==3.3.6
-celery[redis]==5.6.3
-python-multipart==0.0.32
-httpx==0.28.1
-pypdf==6.19.0
-python-docx==1.2.0
-pytest==9.1.1
-PyJWT[crypto]==2.15.1
-boto3==1.44.1
+# The Python packages the backend needs, installed into the Docker image with `pip install -r requirements.txt`
+# (see Dockerfile). Each is pinned to an exact version (==), so every build gets the same code.
+# CLAUDE.md lists the allowed packages: ask before adding another one.
+fastapi==0.141.1            # the web framework: routes, request checking, automatic API docs
+uvicorn[standard]==0.54.0   # the web server that runs the FastAPI app
+sqlalchemy==2.1.1           # talks to the database with Python classes (models.py) instead of raw SQL
+psycopg[binary]==3.3.6      # the PostgreSQL driver SQLAlchemy uses underneath
+celery[redis]==5.6.3        # background tasks (worker.py), with Redis as the queue
+python-multipart==0.0.32    # lets FastAPI read file uploads (multipart forms)
+httpx==0.28.1               # HTTP client for the AI services (ai/llm.py, ai/transcribe.py); also used by the test client
+pypdf==6.19.0               # reads the text out of PDF files (ai/extract.py)
+python-docx==1.2.0          # reads the text out of Word .docx files (ai/extract.py)
+pytest==9.1.1               # runs the tests in tests/
+PyJWT[crypto]==2.15.1       # checks Clerk's signed sign-in tokens (auth.py); [crypto] adds RS256 signatures
+boto3==1.44.1               # Amazon's S3 library, used to talk to Cloudflare R2 storage (storage.py)

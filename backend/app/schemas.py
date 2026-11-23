@@ -45,7 +45,7 @@ class DisplaySettings(BaseModel):
     reading_width: Literal["narrow", "normal", "wide"] = "normal"
     reduce_motion: Literal["system", "on", "off"] = "system"
     underline_links: Literal["off", "on"] = "off"
-    # the interface language (the header's language button, not in the panel). No default: the
+    # the interface language (the header's language button, not in the panel), no default: the
     # browser keeps its own choice (first visit: the browser's language) until one is saved
     language: Literal["en", "el"] | None = None
 
@@ -58,7 +58,7 @@ class StudySetCreated(BaseModel):
 
 class StudySetUsage(BaseModel):
     # GET /api/study-sets/usage: the daily limit for the New study set page. limit 0 = no limit
-    # next_free_at is set only when the limit is reached: when the next new set is allowed again
+    #next_free_at is set only when the limit is reached: when the next new set is allowed again
 
     limit: int
     used: int  # sets created in the last 24 hours, deleted ones included
@@ -66,7 +66,7 @@ class StudySetUsage(BaseModel):
 
 
 class Progress(BaseModel):
-    # points earned vs. points available across all chapters (the overall progress bar)
+    #points earned vs. points available across all chapters (the overall progress bar)
 
     earned: int
     total: int
@@ -78,7 +78,7 @@ class StudySetListItem(BaseModel):
 
     id: int
     title: str | None
-    language: str | None  # the material's language code, for lang="..." (None = unknown)
+    language: str | None  #material's language code, for lang="..." (None = unknown)
     status: str
     progress: Progress
     created_at: datetime
@@ -98,7 +98,7 @@ class ChapterScore(BaseModel):
 
 
 class Message(BaseModel):
-    # a text for the user as a code plus values (see messages.py); the frontend translates it
+    #text for the user as a code plus values (see messages.py); the frontend translates it
     code: str
     values: dict = {}
 
@@ -119,7 +119,7 @@ class StudySetDetail(BaseModel):
 
 
 class ChapterPoints(BaseModel):
-    # one chapter's points, returned after each answer so the quiz can update its bar
+    #one chapter's points, returned after each answer so the quiz can update its bar
 
     earned: int
     max: int
@@ -127,7 +127,7 @@ class ChapterPoints(BaseModel):
 
 
 class QuizQuestion(ORMModel):
-    # an unanswered question as the player sees it: never the answer or the explanation
+    #an unanswered question as the player sees it: never the answer or the explanation
 
     id: int
     prompt: str
@@ -163,14 +163,14 @@ class AnswerIn(BaseModel):
 
 
 class ChapterLinkOut(BaseModel):
-    # just enough to link to a chapter (previous/next chapter, newly unlocked chapter)
+    #just enough to link to a chapter (previous/next chapter, newly unlocked chapter)
 
     id: int
     title: str
 
 
 class AnswerOut(BaseModel):
-    # the result of answering: now the correct answer and explanation may be shown
+    #result of answering: now the correct answer and explanation may be shown
 
     correct: bool
     correct_index: int
@@ -187,7 +187,7 @@ class SetSearchResult(BaseModel):
 
     id: int
     title: str
-    language: str | None  # the study set's language code
+    language: str | None  #study set's language code
     status: str
 
 
@@ -196,7 +196,7 @@ class ChapterSearchResult(BaseModel):
 
     study_set_id: int
     study_set_title: str | None
-    language: str | None  # the study set's language code
+    language: str | None  #study set's language code
     chapter_id: int
     chapter_position: int
     chapter_title: str
@@ -223,7 +223,7 @@ class ChapterSpan(BaseModel):
 
 class StructureOut(BaseModel):
     # the structuring step: language, title and overview of the whole set, and where each chapter
-    # starts and ends. `language` has no rules here on purpose: a wrong code must not fail the whole
+    # starts and ends, `language` has no rules here on purpose: a wrong code must not fail the whole
     # step, so prompts.language_code() checks it afterwards
 
     language: str
@@ -278,21 +278,21 @@ class QuizItem(QuestionOut):
 
 
 class KeyConcept(BaseModel):
-    # one entry of the "Key concepts" tab
+    #one entry of the "Key concepts" tab
 
     term: str
     explanation: str
 
 
 class QAPair(BaseModel):
-    # one flashcard of the "Q&A practice" tab
+    #one flashcard of the "Q&A practice" tab
 
     question: str
     answer: str
 
 
 class OutlineSection(BaseModel):
-    # one heading of the outline in the "Study aids" tab, with its bullet points
+    #one heading of the outline in the "Study aids" tab, with its bullet points
 
     heading: str
     points: list[str]
@@ -307,7 +307,7 @@ class StudyAids(BaseModel):
 
 
 class ChapterOut(BaseModel):
-    # all study materials of one chapter, as stored (the mock produces this shape directly)
+    #all study materials of one chapter, as stored (the mock produces this shape directly)
 
     summary: list[str] = Field(min_length=1)
     key_concepts: list[KeyConcept] = Field(min_length=1)
@@ -397,13 +397,13 @@ class QuestionDraft(BaseModel):
 
 
 class QuizItemDraft(QuestionDraft):
-    # draft question plus its topic name
+    #draft question plus its topic name
 
     topic: str = Field(min_length=1)
 
 
 class ChapterDraft(ChapterOut):
-    # chapter's materials as the LLM writes them: like ChapterOut, but with draft quiz questions
+    #chapter's materials as the LLM writes them: like ChapterOut, but with draft quiz questions
 
     quiz: list[QuizItemDraft] = Field(
         min_length=config.QUESTIONS_PER_CHAPTER, max_length=config.QUESTIONS_PER_CHAPTER

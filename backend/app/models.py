@@ -1,7 +1,7 @@
 """
-All database tables, as SQLAlchemy ORM classes. Created with Base.metadata.create_all() when the API starts
+All database tables as SQLAlchemy ORM classes, created with Base.metadata.create_all() when the API starts
 
-How the tables relate (each arrow is "has many"; deleting a parent deletes its children):
+How the tables relate (each arrow is "has many", deleting a parent deletes its children):
 
     User ─> StudySet ─> SourceFile (the uploaded files)
                       ─> Chapter ──> Topic ──> Question
@@ -43,7 +43,7 @@ class User(Base):
 
 
 class StudySet(Base):
-    # one upload and everything generated from it. `status` follows the processing pipeline
+    # one upload and everything generated from it, `status` follows the processing pipeline
 
     __tablename__ = "study_sets"
 
@@ -111,7 +111,7 @@ class SourceFile(Base):
 
 
 class Chapter(Base):
-    #One chapter of a study set with the AI-written study materials (JSONB = JSON stored in Postgres) 
+    #one chapter of a study set with the AI-written study materials (JSONB = JSON stored in Postgres) 
 
     __tablename__ = "chapters"
     __table_args__ = (

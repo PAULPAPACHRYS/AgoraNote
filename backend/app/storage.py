@@ -64,7 +64,7 @@ def _use_r2() -> bool:
 # --- the functions the rest of the app uses ------------------------------------------------------------
 
 def save(key: str, fileobj: BinaryIO) -> None:
-    #Copy a file-like object to storage in chunks, so big uploads never sit in memory
+    #copy a file-like object to storage in chunks, so big uploads never sit in memory
     if _use_r2():
         # upload_fileobj sends big files in parts (multipart upload), reading the file piece by piece
         _r2().upload_fileobj(fileobj, config.R2_BUCKET, key)
@@ -84,7 +84,7 @@ def download(key: str, dest_path: str) -> None:
 
 
 def exists(key: str) -> bool:
-    #is something stored under this key?
+    #check if something stored under this key
     if _use_r2():
         try:
             _r2().head_object(Bucket=config.R2_BUCKET, Key=key)  # asks for the object's details, not its bytes

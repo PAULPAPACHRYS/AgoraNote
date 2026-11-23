@@ -104,5 +104,6 @@ def test_a_set_deleted_between_progress_updates_stops_quietly(client, monkeypatc
 
 
 def latest_set_id():
+    """The id of the newest study set: the one the worker is processing right now in these tests."""
     with SessionLocal() as db:
         return db.query(StudySet.id).order_by(StudySet.id.desc()).first()[0]

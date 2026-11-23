@@ -21,6 +21,7 @@ DEV_USER = "dev-user"  # the user every request is in dev mode (auth.py), so the
 
 @pytest.fixture(autouse=True)
 def signing_secret(monkeypatch):
+    """Give every test in this file a known signing secret, so the tests can sign messages like Clerk."""
     monkeypatch.setattr(config, "CLERK_WEBHOOK_SIGNING_SECRET", SECRET)
 
 
@@ -41,6 +42,7 @@ def user_deleted(auth_id):
 
 
 def stored_paths(study_set_id):
+    """Where a set's uploaded files are on disk (tests use local storage), to check they get deleted."""
     with SessionLocal() as db:
         files = db.query(SourceFile).filter_by(study_set_id=study_set_id).all()
         return [storage._local_path(f.storage_key) for f in files]

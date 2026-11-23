@@ -52,7 +52,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Each router adds a group of endpoints (see the modules in app/routes/)
+#each router adds a group of endpoints (see the modules in app/routes/)
 app.include_router(study_sets.router)  # /api/study-sets...
 app.include_router(chapters.router)  # /api/chapters/{id}
 app.include_router(quiz.router)  # /api/chapters/{id}/quiz, /api/questions/{id}/answer
@@ -63,11 +63,11 @@ app.include_router(webhooks.router)  # /api/webhooks/clerk (called by Clerk, not
 
 @app.get("/api/health")
 def health():
-    #Liveness check for Docker/Railway: answers without touching the database or needing a login
+    # liveness check for Docker/Railway: answers without touching the database or needing a login
     return {"status": "ok"}
 
 
 @app.get("/api/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)):
-    """The signed-in user. `Depends(get_current_user)` makes FastAPI run auth before this function."""
+    #the signed-in user, `Depends(get_current_user)` makes FastAPI run auth before this function
     return user

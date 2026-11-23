@@ -34,6 +34,7 @@ def token(sub="user_alice", key=PRIVATE_KEY, **claims):
 
 
 def headers(t):
+    """The request header that carries a token, the way the frontend sends it (api.js)."""
     return {"Authorization": f"Bearer {t}"}
 
 

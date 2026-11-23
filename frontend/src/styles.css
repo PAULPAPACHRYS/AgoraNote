@@ -236,7 +236,8 @@ a {
   color: inherit;
 }
 
-/* the right end of the header: the display settings button and (with Clerk) the user menu */
+/* the right end of the header: the language button, the display settings button and (with Clerk)
+   the user menu */
 .header-end {
   display: flex;
   align-items: center;

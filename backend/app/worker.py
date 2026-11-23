@@ -50,8 +50,8 @@ celery.conf.broker_connection_retry_on_startup = True  # keep trying if Redis is
 celery.conf.task_default_queue = "processing"
 celery.conf.task_routes = {"app.worker.generate_replacement_question": {"queue": "quick"}}
 
-MIN_INPUT_CHARS = 500  # less text than this is not enough to build chapters and quizzes from
-# user-readable error messages, stored in study_set.error and shown on the study set page
+MIN_INPUT_CHARS = 500  #less text than this is not enough to build chapters and quizzes from
+#user-readable error messages, stored in study_set.error and shown on the study set page
 GENERIC_ERROR = message("processing_failed")
 UNREACHABLE_ERROR = message("ai_unreachable")
 TRANSCRIBE_UNREACHABLE_ERROR = message("transcription_unreachable")
@@ -64,12 +64,12 @@ def ping():
 
 
 class StudySetDeleted(Exception):
-    # the set was deleted while it was being processed (Delete button, or the whole account deleted)
+    #set was deleted while it was being processed (Delete button, or the whole account deleted)
     pass
 
 
 def study_set_exists(db, study_set_id: int) -> bool:
-    # asks the database itself (db.get could answer from the session's memory), so a set the API
+    #asks the database itself (db.get could answer from the session's memory), so a set the API
     # deleted while this worker was busy is noticed
     return db.scalar(select(StudySet.id).where(StudySet.id == study_set_id)) is not None
 
@@ -94,7 +94,7 @@ def shuffle_options(options: list[str], correct_index: int) -> tuple[list[str], 
 
 
 def build_search_text(chapter: Chapter) -> str:
-    # all searchable text of a chapter in one string (indexed for full-text search, see routes/search.py)
+    #all searchable text of a chapter in one string (indexed for full-text search, see routes/search.py)
     parts = [chapter.title, *chapter.summary]
     parts += [f"{c['term']}: {c['explanation']}" for c in chapter.key_concepts]
     parts += [f"{qa['question']} {qa['answer']}" for qa in chapter.qa_pairs]
@@ -121,7 +121,7 @@ def process_study_set(self, study_set_id: int):
         try:
             run_pipeline(db, study_set)
         except Exception as exc:
-            db.rollback()  # throw away half-done, uncommitted changes before writing the error
+            db.rollback()  #throw away half-done, uncommitted changes before writing the error
             # deleted while being processed: StudySetDeleted, or any database error from saving to the
             # deleted row (e.g. the next status update). Nothing left to save, report or retry
             if not study_set_exists(db, study_set_id):
@@ -130,7 +130,7 @@ def process_study_set(self, study_set_id: int):
             if isinstance(exc, httpx.HTTPError) and self.request.retries < self.max_retries:
                 log.warning("Provider error on study set %s, will retry: %s", study_set_id, exc)
                 set_status(db, study_set, study_set.status, message("retrying"))
-                raise  # autoretry_for re-queues the task with backoff
+                raise  #autoretry_for re-queues the task with backoff
             log.exception("Processing study set %s failed", study_set_id)
             if isinstance(exc, ProcessingError):
                 study_set.error = exc.message
@@ -186,7 +186,7 @@ def generate_replacement_question(self, topic_id: int):
         try:
             db.commit()
         except IntegrityError:
-            # another run got there first: the unique index allows one active question per topic
+            #another run got there first: the unique index allows one active question per topic
             db.rollback()
 
 
@@ -200,7 +200,7 @@ def run_pipeline(db, study_set: StudySet) -> None:
     # noted now: after each commit SQLAlchemy reloads study_set's values from the database on the next
     # read, which fails once the set has been deleted, so the deletion check below can't use study_set.id
     set_id = study_set.id
-    # idempotent: a retry starts from a clean slate
+    #idempotent: a retry starts from a clean slate
     db.execute(delete(Chapter).where(Chapter.study_set_id == study_set.id))
     study_set.error = None
     study_set.overview = ""
@@ -245,9 +245,9 @@ def run_pipeline(db, study_set: StudySet) -> None:
             if not texts[f.position].strip():
                 raise ProcessingError("no_speech", filename=f.original_filename)
             storage.save(transcript_key, io.BytesIO(texts[f.position].encode("utf-8")))
-            # Deleted during the transcription? Then the transcript belongs to nothing: remove it and stop.
-            # Checked after saving, not before, so a deletion at any moment is caught: if it came before
-            # this check, the check sees it; if after, the API's delete removes the transcript itself
+            # deleted during the transcription? Then the transcript belongs to nothing: remove it and stop
+            #checked after saving, not before, so a deletion at any moment is caught: if it came before this check,
+            #then the check sees it, the API's delete removes the transcript itself
             if not study_set_exists(db, set_id):
                 storage.delete(transcript_key)
                 raise StudySetDeleted()

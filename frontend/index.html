@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  index.html: the one HTML page of the app (a "single-page app"). The browser loads it once; after that
+  React (src/main.jsx) draws every page into <div id="root"> and react-router-dom swaps the pages
+  without loading new HTML. Vite fills in the script and stylesheet links when it builds the app.
+  lang="en" is only the starting value: display.js sets it to the chosen interface language (en or el).
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -21,7 +27,9 @@
     />
   </head>
   <body>
+    <!-- React draws the whole app in here (see main.jsx: createRoot(document.getElementById("root"))). -->
     <div id="root"></div>
+    <!-- The app's starting point. type="module" lets the browser load JavaScript files that import each other. -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
