@@ -1,9 +1,9 @@
 <!doctype html>
 <!--
-  index.html: the one HTML page of the app (a "single-page app"). The browser loads it once; after that
-  React (src/main.jsx) draws every page into <div id="root"> and react-router-dom swaps the pages
-  without loading new HTML. Vite fills in the script and stylesheet links when it builds the app.
-  lang="en" is only the starting value: display.js sets it to the chosen interface language (en or el).
+  index.html: the one HTML page of the app (a "single-page app"), the browser loads it once, after that
+  React (src/main.jsx) draws every page into <div id="root"> and react-router-dom swaps the pages without loading new HTML
+  Vite fills in the script and stylesheet links when it builds the app
+  lang="en" is only the starting value: display.js sets it to the chosen interface language (en or el)
 -->
 <html lang="en">
   <head>
@@ -15,9 +15,9 @@
       name="description"
       content="AgoraNote turns your lecture notes and recordings into chapters with summaries, key concepts, flashcards and quizzes."
     />
-    <!-- The browser tab's icon. Vite serves files in public/ from the site root. -->
+    <!--  browser tab's icon, Vite serves files in public/ from the site root -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <!-- The title and text of the preview card when a link is shared in a chat app or social network. -->
+    <!-- title and text of the preview card when a link is shared in a chat app or social network -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AgoraNote" />
     <meta property="og:title" content="AgoraNote" />
@@ -27,9 +27,9 @@
     />
   </head>
   <body>
-    <!-- React draws the whole app in here (see main.jsx: createRoot(document.getElementById("root"))). -->
+    <!-- React draws the whole app in here (see main.jsx: createRoot(document.getElementById("root"))) -->
     <div id="root"></div>
-    <!-- The app's starting point. type="module" lets the browser load JavaScript files that import each other. -->
+    <!-- app's starting point, type="module" lets the browser load JavaScript files that import each other -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
