@@ -35,8 +35,8 @@ def _trim(text: str, limit: int = 200) -> str:
 
 def _terms(text: str, count: int) -> list[str]:
     # pick 'key terms': the most frequent long words (letters of any script, so Greek works too)
-    words = re.findall(r"[^\W\d_]+", text)  # runs of letters (no digits or underscores)
-    counts = Counter(w.casefold() for w in words)  # how often each word occurs, ignoring case
+    words = re.findall(r"[^\W\d_]+", text)  #runs of letters (no digits or underscores)
+    counts = Counter(w.casefold() for w in words)  #how often each word occurs, ignoring case
     first_form = {}
     for w in words:
         first_form.setdefault(w.casefold(), w)
@@ -95,7 +95,7 @@ def _even_spans(n_blocks: int, n_chapters: int) -> list[tuple[int, int]]:
 
 
 def structure(blocks: list[str]) -> StructureOut:
-    #evenly sized chapters of about 2 blocks each; titles from each chapter's first words
+    #evenly sized chapters of about 2 blocks each, titles from each chapter's first words
     n_chapters = min(10, max(1, round(len(blocks) / 2)))
     first_text = _without_file_headings(blocks[0]) or blocks[0]
     first_sentences = split_sentences(first_text) or [first_text]

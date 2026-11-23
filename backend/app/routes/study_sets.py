@@ -8,9 +8,9 @@ Endpoints for study sets: create (upload), list, view, retry and delete
     POST   /api/study-sets/{id}/retry   run processing again after a failure
     DELETE /api/study-sets/{id}         delete the set, its rows and its stored files
 
-Creating a set only stores the files and queues a background task; the actual work (text
-extraction, transcription, AI generation) happens in the worker (see worker.py)
-The browser polls GET /api/study-sets/{id} to show the progress
+creating a set only stores the files and queues a background task:
+the actual work (text extraction, transcription, AI generation) happens in the worker (see worker.py)
+the browser polls GET /api/study-sets/{id} to show the progress
 """
 import io
 import logging
@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 #every route below is relative to this prefix: @router.get("") is GET /api/study-sets
 router = APIRouter(prefix="/api/study-sets")
 
-# accepted file types. "text" files are read directly; "audio" (also video) files are transcribed
+# accepted file types, "text" files are read directly, "audio" or "video" files are transcribed first
 TEXT_EXTENSIONS = {".txt", ".md", ".pdf", ".docx"}
 AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".webm", ".mp4"}
 MAX_TITLE_CHARS = 200
@@ -46,17 +46,17 @@ DAY = timedelta(hours=24)
 
 def safe_filename(name: str) -> str:
     """
-    keep storage keys to plain ASCII; the original name is stored separately for display
+    keep storage keys to plain ASCII, the original name is stored separately for display
     E.g. "Σημειώσεις 1.pdf" -> "file.pdf" and "My notes (v2).docx" -> "My_notes_v2.docx"
     """
     base, ext = os.path.splitext(os.path.basename(name))  # basename: ignore any folder in the name
-    # every run of other characters becomes one "_"; at most 80 characters; never empty
+    # every run of other characters becomes one "_"; at most 80 characters
     base = re.sub(r"[^A-Za-z0-9._-]+", "_", base).strip("._")[:80] or "file"
     return base + ext.lower()
 
 
 def get_owned_set(db: Session, user: User, set_id: int) -> StudySet:
-    #The study set if it belongs to this user, 404 otherwise (don't reveal others' sets exist)
+    #study set if it belongs to this user, 404 otherwise (don't reveal others' sets exist)
     study_set = db.scalar(select(StudySet).where(StudySet.id == set_id, StudySet.user_id == user.id))
     if study_set is None:
         raise HTTPException(status_code=404, detail=message("study_set_not_found"))
@@ -77,8 +77,8 @@ def daily_usage(db: Session, user: User) -> dict:
     ).all()
     next_free_at = None
     if limit > 0 and len(times) >= limit:
-        # a slot frees up when a counted set turns 24 hours old. Usually that is the oldest one;
-        # if the limit was lowered (more sets counted than allowed), enough of them must drop out first
+        #a slot frees up when a counted set turns 24 hours 
+        #usually that is the oldest one, if the limit was lowered (more sets counted than allowed), enough of them must drop out first
         next_free_at = times[len(times) - limit] + DAY
     return {"limit": limit, "used": len(times), "next_free_at": next_free_at}
 
@@ -168,7 +168,7 @@ def create_study_set(
     db.add(StudySetCreation(user_id=user.id))
     db.flush()  # assigns study_set.id, needed for the storage keys
 
-    # pasted text becomes a .txt source file, so every input follows the same path later
+    #pasted text becomes a .txt source file, so every input follows the same path later
     # each source is (filename, kind, content type, size in bytes, readable file object)
     sources = [(f.filename, kind, f.content_type or "", f.size, f.file) for f, kind in zip(files, kinds)]
     if text:
@@ -178,7 +178,7 @@ def create_study_set(
     saved_keys = []
     try:
         for position, (filename, kind, content_type, size, fileobj) in enumerate(sources, start=1):
-            # e.g. "users/1/sets/7/2-notes.pdf": unique per set, and the position keeps names apart
+            # ex: "users/1/sets/7/2-notes.pdf": unique per set, and the position keeps names apart
             key = f"users/{user.id}/sets/{study_set.id}/{position}-{safe_filename(filename)}"
             storage.save(key, fileobj)
             saved_keys.append(key)
@@ -217,7 +217,7 @@ def set_detail(db: Session, study_set: StudySet) -> dict:
 
 @router.get("", response_model=list[StudySetListItem])
 def list_study_sets(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # current user's study sets, newest first, each with its progress (for the dashboard)
+    #current user's study sets, newest first, each with its progress (for the dashboard)
     sets = db.scalars(
         select(StudySet).where(StudySet.user_id == user.id).order_by(StudySet.created_at.desc())
     ).all()
@@ -239,7 +239,7 @@ def get_usage(user: User = Depends(get_current_user), db: Session = Depends(get_
 
 @router.get("/{set_id}", response_model=StudySetDetail)
 def get_study_set(set_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # one study set. The study set page polls this every 3 s while the set is being processed
+    # one study set, the study set page polls this every 3 s while the set is being processed
     return set_detail(db, get_owned_set(db, user, set_id))
 
 
@@ -259,7 +259,7 @@ def retry_study_set(set_id: int, user: User = Depends(get_current_user), db: Ses
 
 @router.delete("/{set_id}", status_code=204)
 def delete_study_set(set_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # delete a set with all its chapters, quizzes and stored files. 204 = done
+    # delete a set with all its chapters, quizzes and stored files, 204 = done
     study_set = get_owned_set(db, user, set_id)
     keys = stored_file_keys(study_set)
     db.delete(study_set)  # rows below it are removed by ON DELETE CASCADE
@@ -271,7 +271,7 @@ def delete_study_set(set_id: int, user: User = Depends(get_current_user), db: Se
 # also used when a whole account is deleted (routes/webhooks.py)
 def stored_file_keys(study_set: StudySet) -> list[str]:
     # every file a set has in storage: its uploads and, for recordings, the saved transcript
-    # (deleting a transcript that was never saved is fine)
+    #deleting a transcript that was never saved is fine
     keys = [f.storage_key for f in study_set.source_files]
     keys += [storage.transcript_key(f.storage_key) for f in study_set.source_files if f.kind == "audio"]
     return keys

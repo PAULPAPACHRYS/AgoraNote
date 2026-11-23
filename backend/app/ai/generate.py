@@ -6,9 +6,9 @@ Three public functions, one per kind of LLM job:
 - chapter_materials(title, text, lang)  -> summary, concepts, Q&A, study aids and 5 quiz questions
 - replacement_question(...)             -> one new quiz question after a wrong answer
 
-Each one builds a prompt (prompts.py), asks the LLM for JSON in a fixed shape (llm.py) and checks
-the reply against a Pydantic model (schemas.py), retrying once with the error message if it doesn't
-match. The structuring step then also cleans up the chapter boundaries in code (repair, merge, split).
+each one builds a prompt (prompts.py), asks the LLM for JSON in a fixed shape (llm.py) and checks
+the reply against a Pydantic model (schemas.py), retrying once with the error message if it doesn't match
+the structuring step then also cleans up the chapter boundaries in code (repair, merge, split)
 """
 import logging
 import math
@@ -24,17 +24,18 @@ log = logging.getLogger(__name__)
 
 def _ask(system: str, user: str, model: type[BaseModel], context: dict | None = None):
     """
-    ask the LLM for JSON and validate it. One retry, telling the model what was wrong
+    ask the LLM for JSON and validate it, one retry, telling the model what was wrong
     provider/network errors are not caught here: the Celery task retries those
     """
     # JSON Schema of the Pydantic model doubles as the structured-output schema for the provider
     schema = model.model_json_schema()
-    # first attempt, `context` is passed to the model's validators (structure checks need n_blocks)
+    #first attempt, `context` is passed to the model's validators (structure checks need n_blocks)
     try:
         return model.model_validate(llm.complete_json(system, user, schema, model.__name__), context=context)
     except ValueError as error:  # bad JSON or pydantic's ValidationError (both are ValueErrors)
         log.warning("LLM reply did not match %s, retrying: %s", model.__name__, error)
-        # second and last attempt, same prompt plus what was wrong. If this fails too, it raises
+        # second and last attempt, same prompt plus what was wrong
+        #if this fails too then it raises
         data = llm.complete_json(system, user + prompts.fix_request(error), schema, model.__name__)
         return model.model_validate(data, context=context)
 
@@ -42,12 +43,12 @@ def _ask(system: str, user: str, model: type[BaseModel], context: dict | None = 
 def _repair_chapters(chapters: list[dict], n_blocks: int) -> list[dict]:
     """
     make the model's chapter boundaries contiguous, keeping its start blocks
-    small models often get end_block off by one (overlaps or gaps). The start blocks carry the real
-    decision, so: sort by start, drop duplicates and out-of-range starts, begin at block 0, and end each
+    small models often get end_block off by one (overlaps or gaps), the start blocks carry the real
+    decision: sort by start, drop duplicates and out-of-range starts, begin at block 0, and end each
     chapter right before the next one starts
 
-    # example with 10 blocks: starts [0, 3, 3, 7, 12] -> chapters 0-2, 3-6, 7-9 (duplicate 3 and
-    # out-of-range 12 dropped; every end_block recomputed)
+    # example with 10 blocks: starts [0, 3, 3, 7, 12] -> chapters 0-2, 3-6, 7-9
+    #duplicate 3 and out-of-range 12 dropped, every end_block recomputed
     """
     starts, kept = set(), []
     for chapter in sorted(chapters, key=lambda c: c["start_block"]):
@@ -57,14 +58,14 @@ def _repair_chapters(chapters: list[dict], n_blocks: int) -> list[dict]:
     if not kept:
         raise ValueError("no usable chapter boundaries")
     kept[0]["start_block"] = 0  # the first chapter always starts at the beginning
-    # Pair each chapter with the one after it (None for the last) to compute its end_block.
+    #pair each chapter with the one after it (None for the last) to compute its end_block
     for chapter, following in zip(kept, kept[1:] + [None]):
         chapter["end_block"] = following["start_block"] - 1 if following else n_blocks - 1
     return kept
 
 
-# every chapter is sent whole to the LLM. 16,000 characters is ~7k tokens even in Greek (~2.3 characters
-# per token), which leaves room in a 16k context window for the instructions (~1k) and the reply (up to llm.MAX_COMPLETION_TOKENS = 7k)
+# every chapter is sent whole to the LLM a total of 16,000 characters is ~7k tokens even in Greek (~2.3 characters per token)
+#  which leaves room in a 16k context window for the instructions (~1k) and the reply (up to llm.MAX_COMPLETION_TOKENS = 7k)
 MAX_CHAPTER_CHARS = 16_000
 #chapter needs enough material for 5 different quiz questions
 MIN_CHAPTER_CHARS = 1_500
@@ -96,7 +97,7 @@ def _split_large_chapters(chapters: list[ChapterSpan], blocks: list[str]) -> lis
     for chapter in chapters:
         indexes = range(chapter.start_block, chapter.end_block + 1)
         total = sum(len(blocks[i]) for i in indexes)
-        parts = math.ceil(total / MAX_CHAPTER_CHARS)  # e.g. 40,000 chars -> 3 parts
+        parts = math.ceil(total / MAX_CHAPTER_CHARS)  #ex: 40,000 chars -> 3 parts
         if parts <= 1:
             result.append(chapter)
             continue
@@ -132,7 +133,7 @@ def structure(blocks: list[str]) -> StructureOut:
         repaired = {**out.model_dump(), "chapters": _repair_chapters(out.model_dump()["chapters"], len(blocks))}
         result = StructureOut.model_validate(repaired, context={"n_blocks": len(blocks)})
     except ValueError:
-        # still no valid chapters: fall back to evenly sized chapters so the user isn't stuck
+        #still no valid chapters: fall back to evenly sized chapters so the user isn't stuck
         log.exception("Structuring failed; falling back to even chapters")
         result = mock.structure(blocks)
         result.language = ""  # the mock's "en" is only a guess: unknown (Greek is still recognised)
@@ -150,7 +151,7 @@ def chapter_materials(title: str, text: str, language: str | None = None) -> Cha
     """
     if config.LLM_PROVIDER == "mock":
         return mock.chapter_materials(title, text)
-    #LLM fills in a ChapterDraft (correct answer + wrong answers); convert to the stored format
+    #LLM fills in a ChapterDraft (correct answer + wrong answers), convert to the stored format
     draft = _ask(prompts.CHAPTER_SYSTEM, prompts.chapter_user(title, text, language), ChapterDraft)
     return draft.to_chapter()
 
@@ -160,7 +161,8 @@ def replacement_question(
 ) -> QuestionOut:
     """
     new question on `topic` that differs from every previous one
-    `previous` holds the texts of all earlier questions on this topic; the prompt tells the LLM not to repeat or rephrase them
+    `previous` holds the texts of all earlier questions on this topic
+    the prompt tells the LLM not to repeat or rephrase them
     """
     if config.LLM_PROVIDER == "mock":
         return mock.replacement_question(chapter_text, topic, previous)

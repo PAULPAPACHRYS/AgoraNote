@@ -56,13 +56,13 @@ def transcribe(
         return f"(Mock transcript of {filename or os.path.basename(audio_path)}.) {MOCK_TRANSCRIPT}"
 
     texts, language = [], None  # language stays None until the first segment has been transcribed
-    with tempfile.TemporaryDirectory() as tmp:  # removed afterwards, also on errors
+    with tempfile.TemporaryDirectory() as tmp:  #removed afterwards, also on errors
         segments = prepare_audio(audio_path, filename or os.path.basename(audio_path), tmp)
         for i, segment in enumerate(segments, start=1):
             if on_progress:
                 on_progress(i, len(segments))
             text, detected = transcribe_segment(segment, language)
-            language = language or detected  # keep the first segment's language for all others
+            language = language or detected  #keep the first segment's language for all others
             texts.append(collapse_repeats(text.strip()))
     return "\n\n".join(t for t in texts if t)
 
@@ -87,8 +87,8 @@ def collapse_repeats(text: str) -> str:
 def transcribe_segment(path: str, language: str | None = None) -> tuple[str, str | None]:
     """
     transcribe one short audio file; returns (text, detected language code or None)
-    raises httpx errors for network problems, timeouts, rate limits and 5xx 
-    (the Celery task retries those) and RuntimeError for other HTTP errors (retrying won't help)
+    raises httpx errors for network problems, timeouts, rate limits and 5xx (the Celery task retries those)
+    and RuntimeError for other HTTP errors (retrying won't help)
     
     form fields of the request. verbose_json also returns the detected language, 
     temperature 0 makes whisper pick the most likely words instead of sampling
@@ -102,7 +102,7 @@ def transcribe_segment(path: str, language: str | None = None) -> tuple[str, str
     seconds_of_audio = audio_duration(path)  # only for the log line
 
     #hold the GPU lock while Whisper works (Ollama is unloaded first, see gpu.py)
-    #file is sent as a multipart upload, like a browser form with a file field.
+    # file is sent as a multipart upload, like a browser form with a file field
     with use_gpu("transcribe"), open(path, "rb") as audio:
         started = time.monotonic()
         response = httpx.post(

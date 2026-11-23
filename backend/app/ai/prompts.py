@@ -64,17 +64,18 @@ JSON contract:
 
 
 '''
-The structure step sees only the beginning of each block. That is enough to find topic boundaries,
-keeps block numbers easy to follow for a small model (with the full text it mixed them up with slide
-numbers), and always fits the context window: 18,000 characters is ~8k tokens even in Greek (~2.3
-characters per token), leaving room in a 16k window for instructions and the reply
+The structure step sees only the beginning of each block
+That is enough to find topic boundaries, keeps block numbers easy to follow for a small model 
+with the full text it mixed them up with slide numbers and always fits the context window:
+18,000 characters is ~8k tokens even in Greek (~2.3 characters per token),
+leaving room in a 16k window for instructions and the reply
 '''
 PREVIEW_BUDGET_CHARS = 18_000
 PREVIEW_MAX_CHARS = 300
 PREVIEW_MIN_CHARS = 80
 
 
-# about one chapter per 5 blocks (~5,000 characters), so each chapter gets its own 5-question quiz
+#about one chapter per 5 blocks (~5,000 characters), so each chapter gets its own 5-question quiz
 # small models ignore vague size hints but follow an explicit number
 BLOCKS_PER_CHAPTER = 5
 

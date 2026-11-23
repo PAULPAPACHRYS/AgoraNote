@@ -5,7 +5,7 @@ Three parts:
 1. **Documents** (extract_text): .txt/.md are read directly, .pdf with pypdf, .docx with python-docx
    PDF page headers/footers are removed (strip_repeated_lines)
 2. **Blocks** (split_into_blocks): the combined text is cut into ~1,000-character blocks at paragraph
-   or sentence boundaries. The LLM decides chapter boundaries in terms of these numbered blocks
+   or sentence boundaries, the LLM decides chapter boundaries in terms of these numbered blocks
 3. **Audio/video** (prepare_audio): ffmpeg converts a recording into small MP3 segments for Whisper
 
 problems with the user's material raise ProcessingError, whose message is shown to the user
@@ -41,8 +41,8 @@ def clean_text(text: str) -> str:
 def extract_text(path: str, filename: str) -> str:
     """
     Plain text of a .txt, .md, .pdf or .docx file
-    `path` is the local copy to read; `filename` is the user's original name (for the extension and
-    for error messages)
+    `path` is the local copy to read
+    `filename` is the user's original name (for the extension and for error messages)
     """
     ext = filename.lower().rsplit(".", 1)[-1]  # "Notes.PDF" -> "pdf"
     if ext in ("txt", "md"):
@@ -52,7 +52,7 @@ def extract_text(path: str, filename: str) -> str:
     if ext == "pdf":
         return clean_text(_pdf_text(path, filename))
     if ext == "docx":
-        # word paragraphs, skipping empty ones. (Tables, headers and footers are not read.)
+        # word paragraphs, skipping empty ones (tables, headers and footers are not read)
         paragraphs = [p.text for p in docx.Document(path).paragraphs if p.text.strip()]
         return clean_text("\n\n".join(paragraphs))
     raise ProcessingError("not_text_document", filename=filename)
@@ -193,7 +193,7 @@ def prepare_audio(path: str, filename: str, out_dir: str, segment_seconds: int =
     result = subprocess.run(
         [
             "ffmpeg", "-loglevel", "error", "-i", path,
-            "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k",  # drop video; mono, 16 kHz, low bitrate
+            "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k",  # drop video, mono, 16 kHz, low bitrate
             # cut into segments; every segment's timestamps start at 0, as if it were its own file
             "-f", "segment", "-segment_time", str(segment_seconds), "-reset_timestamps", "1",
             os.path.join(out_dir, "segment_%03d.mp3"),

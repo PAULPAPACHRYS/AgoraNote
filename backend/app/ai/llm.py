@@ -1,11 +1,11 @@
 """
 Talking to the LLM: one implementation of the OpenAI-compatible Chat Completions API
 
-The same code works with Ollama running locally (its /v1 endpoint), OpenAI and OpenRouter;
-only LLM_BASE_URL, LLM_MODEL and LLM_API_KEY change. Plain httpx, no vendor SDK
+the same code works with Ollama running locally (its /v1 endpoint), OpenAI and OpenRouter
+only LLM_BASE_URL, LLM_MODEL and LLM_API_KEY change, plain httpx, no vendor SDK
 
 One call = one HTTP POST to {LLM_BASE_URL}/chat/completions with a "system" message (the
-instructions, see prompts.py) and a "user" message (the material). The reply's text is parsed as JSON
+instructions, see prompts.py) and a "user" message (the material), the reply's text is parsed as JSON
 
 Every call is logged with its token counts and speed, so the cost/time of a study set is visible
 """
@@ -88,11 +88,11 @@ def complete_json(system: str, user: str, schema: dict | None = None, name: str 
         name, prompt_tokens, completion_tokens, seconds, completion_tokens / seconds if seconds else 0,
     )
 
-    choice = data["choices"][0]  # we ask for one reply, so there is one choice
+    choice = data["choices"][0]  # we ask for one reply so there is one choice
     # finish_reason "length" means the reply stopped because it ran out of room, not because it was done
     if choice.get("finish_reason") == "length":
         if completion_tokens < MAX_COMPLETION_TOKENS:
-            # cut off before our own cap: the model's context window is full. Retrying can't help
+            # cut off before our own cap: the model's context window is full, retrying can't help
             raise RuntimeError(
                 f"The LLM's context window is too small: the reply was cut off at {prompt_tokens} + "
                 f"{completion_tokens} = {prompt_tokens + completion_tokens} tokens. AgoraNote needs 16384; "

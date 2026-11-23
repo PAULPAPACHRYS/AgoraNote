@@ -2,10 +2,9 @@
 Search across all of the user's study sets: GET /api/search?q=...
 
 Two kinds of results:
-1. study sets whose *title* matches, for finding one specific set among many. Titles are short, so
-   every typed word only has to appear somewhere in the title, also as part of a word ("netw" finds
-   "Networking"), ignoring upper/lower case.
-2. chapters whose *content* matches, with PostgreSQL's built-in full-text search (no extra search engine):
+1) Study sets whose *title* matches, for finding one specific set among many
+    Titles are short, so every typed word only has to appear somewhere in the title or part of a word ignoring upper/lower case (ex: "netw" finds "Networking") 
+2) Chapters whose *content* matches, with PostgreSQL's built-in full-text search (no extra search engine):
    - to_tsvector(text) turns a chapter's search_text into a list of normalised words ("lexemes")
    - websearch_to_tsquery(q) turns what the user typed into a query (words, "a phrase", -excluded)
    - `document @@ query` is true when the chapter matches, the GIN index on chapters makes this fast
@@ -24,8 +23,8 @@ router = APIRouter(prefix="/api")
 
 MAX_RESULTS = 20  # the results page shows at most this many study sets, and this many chapters
 
-# 'simple' configuration only lowercases words (no language-specific stemming), so it works the
-#same for Greek and English. Written as a literal so the expression matches the GIN index exactly
+# 'simple' configuration only lowercases words (no language-specific stemming)
+#it works the same for Greek and English, written as a literal so the expression matches the GIN index exactly
 SIMPLE = literal_column("'simple'::regconfig")
 
 # ts_headline marks matches with [[ ]]; the frontend turns those into <mark>, so no HTML comes from here
@@ -46,15 +45,15 @@ def search(
 
 
 def _like_pattern(word: str) -> str:
-    # "%word%" for ILIKE: "anything, then the word, then anything". % and _ are wildcards in LIKE, so
+    # "%word%" for ILIKE: "anything, then the word, then anything". % and _ are wildcards in LIKE
     # a typed % or _ is escaped (with \) to mean just that character
     escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escaped}%"
 
 
 def matching_study_sets(db: Session, user: User, q: str) -> list[dict]:
-    # the user's study sets whose title contains every typed word, newest first.
-    # The content search's extras are left out: quotes are dropped and "-word" (exclude) is skipped
+    # the user's study sets whose title contains every typed word, newest first
+    #the content search's extras are left out: quotes are dropped and "-word" (exclude) is skipped
     words = [w.strip('"') for w in q.split() if not w.startswith("-")]
     words = [w for w in words if w]
     if not words:
