@@ -1,9 +1,11 @@
-// StudySet.jsx: one study set ("/sets/:id").
-// While the set is processed it shows the live status (polled every 3 s); when it failed, the error
-// and a Retry button; when ready, the overview, the overall points and the chapter list.
+/*
+ StudySet.jsx: one study set ("/sets/:id")
+ while the set is processed it shows the live status (polled every 3 s)
+ when it failed, the error and a Retry button
+ when ready, the overview, the overall points and the chapter list
+*/
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-
 import { api, isNotFound } from "../api.js";
 import ChapterList from "../components/ChapterList.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
@@ -11,28 +13,28 @@ import { messageText, t } from "../i18n.js";
 import { setTitle, statusLabel, titleLang } from "../status.js";
 import NotFound from "./NotFound.jsx";
 
-const POLL_MS = 3000; // how often to ask for the status while processing
+const POLL_MS = 3000; //how often to ask for the status while processing
 
-// No more polling needed once processing has ended, successfully or not.
+// no more polling needed once processing has ended, successfully or not
 function isFinished(status) {
   return status === "ready" || status === "failed";
 }
 
 export default function StudySet() {
-  const { id } = useParams(); // the :id part of the URL
+  const { id } = useParams(); // the id part of the URL
   const navigate = useNavigate();
   const [studySet, setStudySet] = useState(null);
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false); // no such set (or not this user's): show the 404 page
   const [pollKey, setPollKey] = useState(0); // bumped by Retry to start polling again
   const [retrying, setRetrying] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false); // two-step delete: ask first
+  const [confirmingDelete, setConfirmingDelete] = useState(false); // two step delete: ask first
   const [deleting, setDeleting] = useState(false);
 
-  // Load the set, then keep polling while it is being processed.
+  // load the set, then keep polling while it is being processed
   useEffect(() => {
     let timer = null;
-    setNotFound(false); // a new id: forget that the previous one didn't exist
+    setNotFound(false); //new id: forget that the previous one didn't exist
     function load() {
       api(`/api/study-sets/${id}`)
         .then((data) => {
@@ -42,7 +44,7 @@ export default function StudySet() {
         })
         .catch((err) => {
           if (isNotFound(err)) {
-            setNotFound(true); // also when the set is deleted (e.g. in another tab) while polling
+            setNotFound(true); //also when the set is deleted (ex: in another tab) while polling
             clearInterval(timer);
           } else {
             setError(err.message);
@@ -51,11 +53,11 @@ export default function StudySet() {
     }
     load();
     timer = setInterval(load, POLL_MS);
-    // React calls this cleanup when the page closes (or id/pollKey change): stop the timer.
+    // React calls this cleanup when the page closes (or id/pollKey change): stop the timer
     return () => clearInterval(timer);
   }, [id, pollKey]);
 
-  // Retry: the server resets the set to "queued" and starts processing again; polling restarts.
+  // Retry: the server resets the set to "queued" and starts processing again, polling restarts
   async function handleRetry() {
     setRetrying(true);
     try {
@@ -67,7 +69,7 @@ export default function StudySet() {
     setRetrying(false);
   }
 
-  // Second step of deleting (after "Delete study set" -> "Yes, delete"); then back to the dashboard.
+  // second step of deleting (after "Delete study set" -> "Yes, delete"), then back to the dashboard
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -80,7 +82,7 @@ export default function StudySet() {
   }
 
   if (notFound) return <NotFound />;
-  // Couldn't load at all (e.g. the server can't be reached): show only the error.
+  // couldn't load at all (ex: the server can't be reached): show only the error
   if (error && !studySet) {
     return (
       <section>
@@ -106,7 +108,7 @@ export default function StudySet() {
       {!isFinished(status) && (
         <div className="processing" role="status">
           <span className="spinner" aria-hidden="true" />
-          {/* status_message: the step as a message code plus values, e.g. "generating_chapter" 2 of 5 */}
+          {/* status_message: the step as a message code plus values, ex: "generating_chapter" 2 of 5 */}
           <span>{studySet.status_message ? messageText(studySet.status_message) : t("set.waiting")}</span>
         </div>
       )}
@@ -122,7 +124,7 @@ export default function StudySet() {
 
       {status === "ready" && (
         <>
-          {/* lang: the overview and chapter titles are in the material's language (e.g. "el") */}
+          {/* lang: the overview and chapter titles are in the material's language (ex: "el") */}
           {studySet.overview && <p className="overview" lang={studySet.language}>{studySet.overview}</p>}
           <div className="overall-progress">
             <ProgressBar

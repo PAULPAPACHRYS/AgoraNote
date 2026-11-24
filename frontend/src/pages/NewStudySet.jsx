@@ -1,20 +1,22 @@
-// NewStudySet.jsx: the upload form ("/new"): optional title, files and/or pasted text.
-// After a successful upload it goes straight to the new set's page, which shows the progress.
-// Above the form: the daily limit (how many new sets are left, or when the next one is possible).
+/*
+ NewStudySet.jsx: the upload form ("/new"): optional title, files and/or pasted text
+ 
+ after a successful upload it goes straight to the new set's page, which shows the progress
+ above the form: the daily limit, how many new sets are left or when the next one is possible
+*/
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { api } from "../api.js";
 import DailyLimit from "../components/DailyLimit.jsx";
 import { language, t } from "../i18n.js";
 
-// Mirrors the server defaults (MAX_FILES_PER_SET, MAX_FILE_MB). The server enforces the real limits.
+// same as server defaults (MAX_FILES_PER_SET, MAX_FILE_MB),  server enforces the real limits
 const MAX_FILES = 5;
 const MAX_FILE_MB = 200;
 // Which files the file picker offers (the server checks again).
 const ACCEPT = ".txt,.md,.pdf,.docx,.mp3,.m4a,.wav,.ogg,.webm,.mp4";
 
-// 1234567 -> "1.2 MB" ("1,2 MB" in Greek), 2048 -> "2 KB".
+// 1234567 -> "1.2 MB" ("1,2 MB" in Greek), 2048 -> "2 KB"
 function formatSize(bytes) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
   return `${(bytes / 1024 / 1024).toLocaleString(language, { maximumFractionDigits: 1 })} MB`;
@@ -26,22 +28,22 @@ export default function NewStudySet() {
   const [files, setFiles] = useState([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false); // disables the buttons while uploading
-  const [usage, setUsage] = useState(null); // the daily limit; null = not loaded (yet)
+  const [submitting, setSubmitting] = useState(false); //disables the buttons while uploading
+  const [usage, setUsage] = useState(null); //daily limit, null = not loaded
 
-  // Ask how many new sets are left. If that fails the form still works: the server checks the limit anyway.
+  // ask how many new sets are left, If that fails the form still works: the server checks the limit anyway
   function loadUsage() {
     api("/api/study-sets/usage").then(setUsage).catch(() => setUsage(null));
   }
 
   useEffect(() => {
     loadUsage();
-  }, []); // once, when the page opens
+  }, []); //once, when the page opens
 
   const limitReached = !!(usage && usage.next_free_at);
 
-  // Quick checks before uploading, so obvious mistakes don't need a round trip. Returns an error
-  // message, or "" when everything is fine. The texts are the same as the server's for these checks.
+  // quick checks before uploading, so obvious mistakes don't need a round trip
+  // Returns an error message, or "" when everything is fine, texts are the same as the server's for these checks
   function checkInput() {
     if (files.length === 0 && !text.trim()) return t("message.nothing_uploaded");
     if (files.length > MAX_FILES) return t("message.too_many_files", { max: MAX_FILES });
@@ -58,8 +60,8 @@ export default function NewStudySet() {
       return;
     }
 
-    // A multipart form, like a classic HTML form with file fields: the format the API expects.
-    // Each file is appended under the same name "files"; the server receives them as a list.
+    // a multipart form, like a classic HTML form with file fields: the format the API expects
+    // each file is appended under the same name "files", the server receives them as a list
     const form = new FormData();
     if (title.trim()) form.append("title", title.trim());
     if (text.trim()) form.append("text", text);
@@ -69,11 +71,11 @@ export default function NewStudySet() {
     setSubmitting(true);
     try {
       const created = await api("/api/study-sets", { method: "POST", body: form });
-      navigate(`/sets/${created.id}`); // processing continues in the background
+      navigate(`/sets/${created.id}`); //processing continues in the background
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
-      loadUsage(); // e.g. the limit was reached in another tab: show when the next set is possible
+      loadUsage(); //ex: the limit was reached in another tab: show when the next set is possible
     }
   }
 

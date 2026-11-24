@@ -1,11 +1,13 @@
-// NotFound.jsx: the "page not found" page, for any URL that matches no route (the "*" route in
-// main.jsx). It is shown inside the normal layout, so the header and search box are still there.
+/*
+ NotFound.jsx: the "page not found" page, for any URL that matches no route (the "*" route in  main.jsx)
+ it is shown inside the normal layout, so the header and search box are still there
+*/
 import { Link, useLocation } from "react-router-dom";
 
 import { t } from "../i18n.js";
 
 export default function NotFound() {
-  const location = useLocation(); // the address that was asked for, shown so typos are easy to spot
+  const location = useLocation(); //address that was asked for, shown so typos are easy to spot
 
   return (
     <section className="empty">

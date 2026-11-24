@@ -1,11 +1,12 @@
-// Privacy.jsx: the privacy page (/privacy). It says what AgoraNote stores, where, and how to delete it.
-// Anyone can open it, signed in or not (see App.jsx), so people can read it before creating an account.
-//
-// The page is long prose with links in it, so it is written out once per language here instead of
-// being cut into i18n.js texts. Keep both versions saying the same, and keep them true: when the setup
-// changes (database host, AI provider), change this page with it.
-import { Link } from "react-router-dom";
+/*
+ Privacy.jsx: the privacy page (/privacy)
+ it says what AgoraNote stores, where, and how to delete it
+ anyone can open it, signed in or not (see App.jsx), so people can read it before creating an account
 
+ the page is long prose with links in it, so it is written out once per language here instead of being cut into i18n.js texts
+ keep both versions saying the same, and keep them true: when the setup changes (database host, AI provider), change this page with it
+*/
+import { Link } from "react-router-dom";
 import { language } from "../i18n.js";
 
 export default function Privacy() {
@@ -70,8 +71,7 @@ function PrivacyEnglish() {
         address asked for which page, and when) to find and fix problems.
       </p>
 
-      {/* Phase 10: update this section (in both languages) when the deployed app switches to a hosted
-          AI provider. */}
+      {/* update this section (in both languages) when the deployed app switches to a hosted AI provider*/}
       <h2>How your material is processed: AI</h2>
       <p>
         AgoraNote uses AI models to split your material into chapters, write the study material and
@@ -108,8 +108,7 @@ function PrivacyEnglish() {
   );
 }
 
-// The same as PrivacyEnglish, in Greek. The button names are the ones the Greek interface shows
-// (Clerk's own menu included).
+//same as PrivacyEnglish but in Greek. the button names are the ones the Greek interface shows (Clerk's own menu included)
 function PrivacyGreek() {
   return (
     <>

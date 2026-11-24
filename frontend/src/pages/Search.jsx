@@ -1,9 +1,10 @@
-// Search.jsx: the search results page ("/search?q=...").
-// The header's search box navigates here; this page asks the API and shows two kinds of results:
-// - study sets whose title matches (to find one set among many by its name),
-// - chapters whose content matches, grouped by study set, each with a snippet in which the matched
-//   words are highlighted.
-// When nothing matches, a button leads back to the home screen.
+/*
+ Search.jsx: the search results page ("/search?q=...")
+ the header's search box navigates here, this page asks the API and shows two kinds of results:
+ - study sets whose title matches (to find one set among many by its name)
+ - chapters whose content matches, grouped by study set, each with a snippet in which the matched words are highlighted
+ When nothing matches, a button leads back to the home screen
+*/
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -12,7 +13,7 @@ import Highlight from "../components/Highlight.jsx";
 import { t } from "../i18n.js";
 import { statusLabel } from "../status.js";
 
-// Results arrive best match first; keep that order while grouping them by study set.
+//results arrive best match first; keep that order while grouping them by study set
 function groupBySet(results) {
   const groups = [];
   for (const r of results) {
@@ -34,12 +35,11 @@ function groupBySet(results) {
 
 export default function Search() {
   const [searchParams] = useSearchParams();
-  const q = (searchParams.get("q") || "").trim(); // the search words from the URL
+  const q = (searchParams.get("q") || "").trim(); //search words from the URL
   const [results, setResults] = useState(null); // { study_sets: [...], chapters: [...] }
   const [error, setError] = useState("");
 
-  // Search again whenever the query in the URL changes. encodeURIComponent makes spaces, quotes and
-  // Greek letters safe to put in a URL.
+  // search again whenever the query in the URL changes, encodeURIComponent makes spaces, quotes and Greek letters safe to put in a URL
   useEffect(() => {
     setResults(null);
     setError("");
@@ -80,7 +80,7 @@ export default function Search() {
               <li key={s.id}>
                 <Link to={`/sets/${s.id}`} className="result result-set">
                   <span className="result-title" lang={s.language}>{s.title}</span>
-                  {/* the status only when it isn't simply ready, e.g. "Processing" or "Failed" */}
+                  {/* the status only when it isn't simply ready, ex: "Processing" or "Failed" */}
                   {s.status !== "ready" && (
                     <span className={`badge badge-${s.status}`}>{statusLabel(s.status)}</span>
                   )}

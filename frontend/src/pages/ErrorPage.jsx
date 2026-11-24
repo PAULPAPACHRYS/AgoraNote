@@ -1,11 +1,12 @@
-// ErrorPage.jsx: the friendly page shown when a page crashes while drawing itself (a bug), instead of
-// a blank screen. React Router shows it through `errorElement` (see main.jsx) and hands over the
-// error, which useRouteError() reads.
-//
-// It is used in two places:
-// - around the pages: the error shows inside the normal layout, so the header still works;
-// - around the whole app (`standalone`): for errors in the layout itself, so it draws its own simple
-//   header and doesn't rely on anything that may be broken (like the sign-in components).
+/*
+ ErrorPage.jsx: the friendly page shown when a page crashes while drawing itself, instead of a blank screen
+ React Router shows it through `errorElement` (see main.jsx) and hands over the error, which useRouteError() reads
+
+ It is used in two places:
+ - around the pages: the error shows inside the normal layout, so the header still works
+ - around the whole app (`standalone`): for errors in the layout itself, 
+   so it draws its own simple header and doesn't rely on anything that may be broken (like the sign-in components)
+*/
 import { Link, isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 import { t } from "../i18n.js";
@@ -14,8 +15,8 @@ import NotFound from "./NotFound.jsx";
 export default function ErrorPage({ standalone = false }) {
   const error = useRouteError();
 
-  // The router itself reports an unknown URL as a 404 "error"; the "*" route normally catches those
-  // first, but if one gets here it gets the proper not-found page rather than "something went wrong".
+  //the router itself reports an unknown URL as a 404 "error", the "*" route normally catches those first
+  //but if one gets here it gets the proper not-found page rather than "something went wrong"
   const notFound = isRouteErrorResponse(error) && error.status === 404;
 
   const content = notFound ? (
@@ -31,7 +32,7 @@ export default function ErrorPage({ standalone = false }) {
         </button>
         <Link to="/" className="button">{t("common.back_to_sets")}</Link>
       </div>
-      {/* the technical details help while developing; users of the built app don't see them */}
+      {/* technical details help while developing, users of the built app don't see them */}
       {import.meta.env.DEV && (
         <details className="error-details">
           <summary>{t("error.details")}</summary>
