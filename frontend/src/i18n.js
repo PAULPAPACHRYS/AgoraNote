@@ -1,28 +1,32 @@
-// i18n.js ("internationalisation"): every text of the interface, in English and Greek.
-//
-// Components show a text with t(key), e.g. t("nav.search") or t("flashcards.card", { n: 2, total: 9 })
-// for "Card 2 of 9". The language is chosen with the language button in the header and saved with the
-// display settings (display.js). Switching reloads the page, so the language never changes while a
-// page is open: t() can simply look up the text whenever a component is drawn.
-//
-// The generated study material is not translated: it stays in the lecture's own language.
-// Messages from the server (progress, errors) arrive as a code plus values and are translated by
-// messageText() below; their texts are the "message." keys (see backend/app/messages.py).
+/*
+ i18n.js ("internationalisation"): every text of the interface in English and Greek
+
+ components show a text with t(key), ex: t("nav.search") or t("flashcards.card", { n: 2, total: 9 }) for "Card 2 of 9"
+ language is chosen with the language button in the header and saved with the display settings (display.js)
+ switching reloads the page, so the language never changes while a page is open:
+  t() can simply look up the text whenever a component is drawn
+
+ generated study material is not translated: it stays in the lecture's own language
+ messages from the server (progress, errors) arrive as a code plus values and are translated by messageText() below
+ their texts are the "message." keys (see backend/app/messages.py)
+*/
 import { cloneElement, isValidElement } from "react";
 
 import { loadDisplay } from "./display.js";
 
-// The interface language of this visit: "en" or "el".
+//interface language of this visit: "en" or "el"
 export const language = loadDisplay().language;
 
-// {name} in a text is replaced by values.name. A number is written the local way (500,000 in English,
-// 500.000 in Greek). Plurals: when values.count is 1, the key's "_one" text is used if there is one
-// ("1 point" instead of "1 points").
-// A value can also be a React element, e.g. t("quiz.unlocked", { title: <strong>...</strong> }); then
-// t() returns a list of strings and elements, which React draws like any other content.
+/*
+ {name} in a text is replaced by values.name, a number is written the local way (500,000 in English, 500.000 in Greek)
+ Plurals: when values.count is 1, the key's "_one" text is used if there is one ("1 point" instead of "1 points")
+
+ a value can also be a React element, ex: t("quiz.unlocked", { title: <strong>...</strong> }), 
+ then t() returns a list of strings and elements, which React draws like any other content
+*/
 export function t(key, values = {}) {
   const texts = TEXTS[language];
-  let text = texts[key] ?? TEXTS.en[key] ?? key; // a missing Greek text falls back to the English one
+  let text = texts[key] ?? TEXTS.en[key] ?? key; //missing Greek text falls back to the English one
   if (values.count === 1 && texts[`${key}_one`]) text = texts[`${key}_one`];
 
   // split() with a capture group keeps the placeholder names at the odd positions:
@@ -30,7 +34,7 @@ export function t(key, values = {}) {
   const parts = text.split(/\{(\w+)\}/).map((part, i) => {
     if (i % 2 === 0) return part;
     const value = values[part];
-    if (value === undefined) return `{${part}}`; // a forgotten value stays visible
+    if (value === undefined) return `{${part}}`; //forgotten value stays visible
     return typeof value === "number" ? value.toLocaleString(language) : value;
   });
   if (parts.every((part) => typeof part === "string")) return parts.join("");
@@ -38,26 +42,26 @@ export function t(key, values = {}) {
   return parts.map((part, i) => (isValidElement(part) ? cloneElement(part, { key: i }) : part));
 }
 
-// A message from the server ({code, values}) in the interface language. Unknown codes (e.g. from a
-// newer server) get a general "something went wrong".
+// message from the server ({code, values}) in the interface language
+// unknown codes (ex: from anewer server) get a general "something went wrong"
 export function messageText(message) {
   const key = `message.${message.code}`;
   return key in TEXTS.en ? t(key, message.values) : t("message.unknown");
 }
 
-// A date the local way, e.g. 19/11/2026 in Greek.
+//date the local way, e.g. 19/11/2026 in Greek
 export function formatDate(value) {
   return new Date(value).toLocaleDateString(language);
 }
 
-// A date and time the local way, e.g. "20 Nov 2026, 14:32" ("20 Νοε 2026, 14:32" in Greek).
+//date and time the local way, e.g. "20 Nov 2026, 14:32" ("20 Νοε 2026, 14:32" in Greek)
 export function formatDateTime(value) {
   return new Date(value).toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
 }
 
 const TEXTS = {
   en: {
-    // shared
+    //shared
     "common.loading": "Loading…",
     "common.cancel": "Cancel",
     "common.back_to_sets": "Back to your study sets",
@@ -122,11 +126,11 @@ const TEXTS = {
     "status.ready": "Ready",
     "status.failed": "Failed",
 
-    // dashboard
+    //dashboard
     "dashboard.title": "Your study sets",
     "dashboard.progress": "Progress",
 
-    // new study set
+    //new study set
     "new.title_label": "Title (optional)",
     "new.title_placeholder": "Leave empty to generate one from the material",
     "new.files": "Files",
@@ -186,7 +190,7 @@ const TEXTS = {
     "flashcards.next": "Next →",
     "flashcards.card": "Card {n} of {total}",
 
-    // quiz
+    //quiz
     "quiz.loading": "Loading quiz…",
     "quiz.chapter_points": "Chapter points",
     "quiz.chapter_points_value": "Chapter points: {earned} / {max}",
@@ -207,7 +211,7 @@ const TEXTS = {
     "quiz.next_chapter": "Next chapter: {title} →",
     "quiz.back_to_set": "Back to the study set",
 
-    // search
+    //search
     "search.title": "Search",
     "search.empty": "Type a word or phrase in the search box to search all your study sets.",
     "search.results": "Results for “{q}”",
@@ -218,7 +222,7 @@ const TEXTS = {
     "search.sets": "Study sets",
     "search.chapter": "Chapter {n}: {title}",
 
-    // not found and error pages
+    //not found and error pages
     "notfound.title": "Page not found",
     "notfound.text": "There is no page at {path}. The link may be mistyped, or the page may have been moved or deleted.",
     "error.title": "Something went wrong",
@@ -252,7 +256,7 @@ const TEXTS = {
     "message.material_too_long":
       "The material is too long ({length} characters; the limit is {max}). Try splitting it into several study sets.",
     "message.not_enough_material": "Not enough material to build a study set.",
-    // API errors
+    //API errors
     "message.study_set_not_found": "Study set not found.",
     "message.chapter_not_found": "Chapter not found.",
     "message.question_not_found": "Question not found.",
