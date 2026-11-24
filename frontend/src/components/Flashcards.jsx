@@ -1,16 +1,16 @@
-// Flashcards.jsx: the "Q&A practice" tab of a chapter.
+// Flashcards.jsx: the "Q&A practice" tab of a chapter
 import { useEffect, useState } from "react";
 
 import { t } from "../i18n.js";
 
-// Q&A practice: question on the front; click, tap or Space reveals the answer. No points here.
-// `lang` is the material's language: it goes on the card's text, not on the interface's labels.
+// Q&A practice: question on the front: click, tap or Space reveals the answer
+// `lang` is the material's language: it goes on the card's text, not on the interface's labels
 export default function Flashcards({ cards, lang }) {
-  const [index, setIndex] = useState(0); // which card is shown
-  const [revealed, setRevealed] = useState(false); // showing the answer side?
+  const [index, setIndex] = useState(0); //which card is shown
+  const [revealed, setRevealed] = useState(false); //showing the answer side?
 
-  // Space anywhere on the page flips the card. When a button has focus, the browser already
-  // turns Space into a click on that button, so we leave those alone.
+  // space anywhere on the page flips the card
+  // when a button has focus, the browser already turns space into a click on that button
   useEffect(() => {
     function onKeyDown(event) {
       if (event.key !== " " || event.target.closest("button, input, textarea, select, a")) return;
@@ -18,13 +18,13 @@ export default function Flashcards({ cards, lang }) {
       setRevealed((r) => !r);
     }
     window.addEventListener("keydown", onKeyDown);
-    // Remove the listener again when the flashcards disappear (e.g. another tab is opened).
+    // remove the listener again when the flashcards disappear (ex: another tab is opened)
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   if (cards.length === 0) return <p className="muted">{t("flashcards.none")}</p>;
 
-  // Previous (-1) / next (+1) card; a new card always starts on the question side.
+  // previous (-1) / next (+1) card, a new card always starts on the question side
   function go(step) {
     setIndex((i) => i + step);
     setRevealed(false);

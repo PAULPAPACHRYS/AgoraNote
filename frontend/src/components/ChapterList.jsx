@@ -1,17 +1,19 @@
-// ChapterList.jsx: the chapter list on the study set page. Every row links to the chapter and shows
-// its points bar (with the unlock threshold marked), and a lock note or a "complete" mark.
+/*
+ ChapterList.jsx: the chapter list on the study set page
+ every row links to the chapter and shows its points bar (with the unlock threshold marked)
+ and a lock note or a "complete" mark
+*/
 import { Link } from "react-router-dom";
-
 import { t } from "../i18n.js";
 import ProgressBar from "./ProgressBar.jsx";
 
-// The ordered chapters of a study set, with each chapter's points and whether its quiz is open.
-// `lang` is the material's language, for the (generated) chapter titles.
+// ordered chapters of a study set, with each chapter's points and whether its quiz is open
+// `lang` is the material's language, for the (generated) chapter titles
 export default function ChapterList({ setId, chapters, lang }) {
   return (
     <ol className="chapter-list">
       {chapters.map((chapter, i) => {
-        // The chapter before this one: its points decide whether this chapter's quiz is open.
+        // chapter before this one: its points decide whether this chapter's quiz is open
         const previous = chapters[i - 1];
         return (
           <li key={chapter.id}>
