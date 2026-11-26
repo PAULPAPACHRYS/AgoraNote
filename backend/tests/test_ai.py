@@ -2,10 +2,11 @@
 import math
 import subprocess
 
+import httpx
 import pytest
 
 from app import config
-from app.ai import extract, generate, prompts, transcribe
+from app.ai import extract, generate, llm, prompts, transcribe
 from app.ai.extract import strip_repeated_lines
 from app.ai.llm import strip_fences
 from app.schemas import ChapterSpan, QuestionDraft
@@ -164,3 +165,86 @@ def test_whisper_repetition_loops_are_collapsed():
     )
     # Two in a row can be real speech ("Yes. Yes."): kept.
     assert transcribe.collapse_repeats("Thank you. Thank you. Bye.") == "Thank you. Thank you. Bye."
+
+
+class FakePost:
+    """Stands in for httpx.post: remembers what was sent and answers with a fixed JSON reply."""
+
+    def __init__(self, reply):
+        self.reply, self.sent = reply, {}
+
+    def __call__(self, url, **kwargs):
+        self.sent = {"url": url, **kwargs}
+        return httpx.Response(200, json=self.reply)
+
+
+LLM_REPLY = {"choices": [{"message": {"content": '{"ok": true}'}, "finish_reason": "stop"}], "usage": {}}
+
+
+def test_openai_gets_max_completion_tokens_and_temperature_only_without_reasoning(monkeypatch):
+    monkeypatch.setattr(config, "SHARED_GPU", False)
+    monkeypatch.setattr(config, "LLM_BASE_URL", "https://api.openai.com/v1")
+    post = FakePost(LLM_REPLY)
+    monkeypatch.setattr(llm.httpx, "post", post)
+
+    monkeypatch.setattr(config, "LLM_REASONING_EFFORT", "none")
+    assert llm.complete_json("system", "user") == {"ok": True}
+    body = post.sent["json"]
+    assert body["max_completion_tokens"] == llm.MAX_COMPLETION_TOKENS and "max_tokens" not in body
+    assert body["temperature"] == 0.3
+
+    # while the model thinks, OpenAI only accepts its default temperature: none is sent
+    monkeypatch.setattr(config, "LLM_REASONING_EFFORT", "low")
+    llm.complete_json("system", "user")
+    assert "temperature" not in post.sent["json"]
+
+
+def test_ollama_gets_max_tokens(monkeypatch):
+    monkeypatch.setattr(config, "SHARED_GPU", False)
+    monkeypatch.setattr(config, "LLM_BASE_URL", "http://host.docker.internal:11434/v1")
+    monkeypatch.setattr(config, "LLM_REASONING_EFFORT", "")
+    post = FakePost(LLM_REPLY)
+    monkeypatch.setattr(llm.httpx, "post", post)
+    llm.complete_json("system", "user")
+    body = post.sent["json"]
+    assert body["max_tokens"] == llm.MAX_COMPLETION_TOKENS and "max_completion_tokens" not in body
+    assert body["temperature"] == 0.3
+
+
+@pytest.fixture
+def segment(monkeypatch, tmp_path):
+    """A fake audio segment; transcription settings that need no GPU lock or ffprobe."""
+    monkeypatch.setattr(config, "SHARED_GPU", False)
+    monkeypatch.setattr(config, "TRANSCRIBE_VAD_FILTER", False)
+    monkeypatch.setattr(transcribe, "audio_duration", lambda path: 600.0)
+    path = tmp_path / "segment.mp3"
+    path.write_bytes(b"fake mp3")
+    return str(path)
+
+
+def test_gpt_transcribe_language_fields(monkeypatch, segment):
+    monkeypatch.setattr(config, "TRANSCRIBE_MODEL", "gpt-transcribe")
+    post = FakePost({"text": "Γεια σας.", "languages": [{"code": "el"}], "usage": {"type": "duration", "seconds": 600}})
+    monkeypatch.setattr(transcribe.httpx, "post", post)
+
+    assert transcribe.transcribe_segment(segment) == ("Γεια σας.", "el")
+    assert "response_format" not in post.sent["data"] and "languages[]" not in post.sent["data"]
+
+    transcribe.transcribe_segment(segment, "el")
+    assert post.sent["data"]["languages[]"] == "el" and "language" not in post.sent["data"]
+
+
+def test_gpt_transcribe_unsure_of_the_language(monkeypatch, segment):
+    monkeypatch.setattr(config, "TRANSCRIBE_MODEL", "gpt-transcribe")
+    monkeypatch.setattr(transcribe.httpx, "post", FakePost({"text": "", "languages": []}))
+    assert transcribe.transcribe_segment(segment) == ("", None)
+
+
+def test_whisper_server_language_fields(monkeypatch, segment):
+    monkeypatch.setattr(config, "TRANSCRIBE_MODEL", "deepdml/faster-whisper-large-v3-turbo-ct2")
+    post = FakePost({"text": "Hello.", "language": "en"})
+    monkeypatch.setattr(transcribe.httpx, "post", post)
+
+    assert transcribe.transcribe_segment(segment, "en") == ("Hello.", "en")
+    assert post.sent["data"]["response_format"] == "verbose_json"
+    assert post.sent["data"]["language"] == "en"

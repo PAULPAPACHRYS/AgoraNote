@@ -1,6 +1,10 @@
 """
 Speech to text /audio/transcriptions API, plain httpx
 
+the same code works with speaches (local Whisper, see docker-compose.yml) and OpenAI's gpt-transcribe:
+only TRANSCRIBE_BASE_URL, TRANSCRIBE_MODEL and TRANSCRIBE_API_KEY change. The two differ in a few
+form fields, which transcribe_segment handles (see uses_languages_list)
+
 The flow for one recording (transcribe):
   ffmpeg -> <=10-minute MP3 segments (extract.prepare_audio)
   -> each segment is uploaded to /audio/transcriptions (transcribe_segment), in order
@@ -84,18 +88,32 @@ def collapse_repeats(text: str) -> str:
     return " ".join(kept)
 
 
+def uses_languages_list() -> bool:
+    """
+    OpenAI's gpt-transcribe models take the language as a list ("languages[]") and only answer in
+    plain "json", which reports the language as "languages": [{"code": "el"}]
+    Whisper servers (speaches) take "language" and need "verbose_json" to report the detected language
+    """
+    return config.TRANSCRIBE_MODEL.startswith("gpt-transcribe")
+
+
 def transcribe_segment(path: str, language: str | None = None) -> tuple[str, str | None]:
     """
     transcribe one short audio file; returns (text, detected language code or None)
     raises httpx errors for network problems, timeouts, rate limits and 5xx (the Celery task retries those)
     and RuntimeError for other HTTP errors (retrying won't help)
-    
-    form fields of the request. verbose_json also returns the detected language, 
-    temperature 0 makes whisper pick the most likely words instead of sampling
+
+    temperature 0 makes the model pick the most likely words instead of sampling
     """
-    data = {"model": config.TRANSCRIBE_MODEL, "response_format": "verbose_json", "temperature": "0"}
-    if language:
-        data["language"] = language
+    data = {"model": config.TRANSCRIBE_MODEL, "temperature": "0"}
+    if uses_languages_list():
+        # "languages[]" is how a list is sent in a form: the field name ends in [] (one value here)
+        if language:
+            data["languages[]"] = language
+    else:
+        data["response_format"] = "verbose_json"  # verbose_json also returns the detected language
+        if language:
+            data["language"] = language
     if config.TRANSCRIBE_VAD_FILTER:
         data["vad_filter"] = "true"
     headers = {"Authorization": f"Bearer {config.TRANSCRIBE_API_KEY}"} if config.TRANSCRIBE_API_KEY else {}
@@ -121,11 +139,15 @@ def transcribe_segment(path: str, language: str | None = None) -> tuple[str, str
         raise RuntimeError(f"Transcription failed ({response.status_code}): {response.text[:500]}")
 
     result = response.json()
-    # speaches returns a code ("el"), only a 2-letter code is passed on to later segments
+    # speaches: "language": "el"; gpt-transcribe: "languages": [{"code": "el"}] (empty when unsure)
     detected = result.get("language")
+    if result.get("languages"):
+        detected = result["languages"][0].get("code")
+    # only a 2-letter code is passed on to later segments
     detected = detected if isinstance(detected, str) and len(detected) == 2 else None
     log.info(
-        "Transcribed %.0fs of audio in %.1fs (%.1fx real time), language=%s",
+        "Transcribed %.0fs of audio in %.1fs (%.1fx real time), language=%s, usage=%s",
         seconds_of_audio, seconds, seconds_of_audio / seconds if seconds else 0, language or detected,
+        result.get("usage"),  # what the provider bills (gpt-transcribe: seconds of audio)
     )
     return result.get("text", ""), detected

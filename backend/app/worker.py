@@ -45,8 +45,10 @@ storage.check_settings()
 
 celery = Celery("agoranote", broker=config.REDIS_URL, backend=config.REDIS_URL)
 celery.conf.broker_connection_retry_on_startup = True  # keep trying if Redis isn't up yet at start
-# two queues, each with its own worker (see docker-compose.yml): study sets are processed one at a
-# time, and replacement quiz questions never wait behind a long transcription
+# two queues. Locally each has its own worker (see docker-compose.yml): study sets are processed one
+# at a time on the shared GPU, and replacement quiz questions never wait behind a long transcription.
+# On Railway (hosted AI, no GPU) one worker listens to both queues and runs two tasks at a time:
+#   celery -A app.worker worker --loglevel=info -Q processing,quick --concurrency=2
 celery.conf.task_default_queue = "processing"
 celery.conf.task_routes = {"app.worker.generate_replacement_question": {"queue": "quick"}}
 

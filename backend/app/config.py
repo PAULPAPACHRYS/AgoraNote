@@ -56,8 +56,8 @@ R2_BUCKET = os.environ.get("R2_BUCKET", "")
 
 # --- study materials LLM --------------------------------------------------
 
-# LLM_PROVIDER: local, will switch to API before deployment
-# Chat Completions API: Ollama's /v1 endpoint locally
+# LLM_PROVIDER: "openai" = any OpenAI-compatible Chat Completions API: Ollama's /v1 endpoint locally,
+# OpenAI itself (gpt-6-luna) on Railway; "mock" = canned answers, no AI (tests)
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "")
@@ -70,7 +70,8 @@ LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "")
 
 # --- speech to text LLM ----------------------------------------------------
 
-# TRANSCRIBE_PROVIDER: local, will switch to API before deployment
+# TRANSCRIBE_PROVIDER: "openai" = any OpenAI-compatible /audio/transcriptions API: speaches (local
+# Whisper) locally, OpenAI itself (gpt-transcribe) on Railway; "mock" = a placeholder transcript
 TRANSCRIBE_PROVIDER = os.environ.get("TRANSCRIBE_PROVIDER", "mock")
 TRANSCRIBE_API_KEY = os.environ.get("TRANSCRIBE_API_KEY", "")
 TRANSCRIBE_MODEL = os.environ.get("TRANSCRIBE_MODEL", "")

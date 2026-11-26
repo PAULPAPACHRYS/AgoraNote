@@ -14,7 +14,7 @@ export default function Privacy() {
     <article className="prose privacy">
       {language === "el" ? <PrivacyGreek /> : <PrivacyEnglish />}
       <p className="muted small">
-        {language === "el" ? "Τελευταία ενημέρωση: 20 Νοεμβρίου 2026" : "Last updated: 20 November 2026"}
+        {language === "el" ? "Τελευταία ενημέρωση: 26 Νοεμβρίου 2026" : "Last updated: 26 November 2026"}
       </p>
       <p>
         <Link to="/">{language === "el" ? "Πίσω στο AgoraNote" : "Back to AgoraNote"}</Link>
@@ -70,13 +70,23 @@ function PrivacyEnglish() {
         technically open the stored data. The servers also keep technical logs (for example, which
         address asked for which page, and when) to find and fix problems.
       </p>
-
-      {/* update this section (in both languages) when the deployed app switches to a hosted AI provider*/}
-      <h2>How your material is processed: AI</h2>
       <p>
-        AgoraNote uses AI models to split your material into chapters, write the study material and
-        quiz questions, and turn recordings into text. These models run on AgoraNote's own computer, so
-        your material is not sent to any AI company and is not used to train AI models.
+        AgoraNote's servers and its database are hosted by{" "}
+        <a href="https://railway.com/legal/privacy">Railway</a>, a company based in the United States,
+        in its data centre in the Netherlands (EU).
+      </p>
+
+      <h2>How your material is processed: OpenAI</h2>
+      <p>
+        AgoraNote uses AI models from <a href="https://openai.com/policies/privacy-policy/">OpenAI</a>,
+        a company based in the United States, to turn recordings into text, split your material into
+        chapters, and write the study material and quiz questions. To do this, your recordings and the
+        text of your material are sent to OpenAI.
+      </p>
+      <p>
+        OpenAI does not use what AgoraNote sends to train its AI models. It may keep the text for up to
+        30 days to detect misuse of its service, and then deletes it. Recordings sent to be turned into
+        text are not kept.
       </p>
 
       <h2>In your browser</h2>
@@ -162,13 +172,24 @@ function PrivacyGreek() {
         επίσης τεχνικά αρχεία καταγραφής (για παράδειγμα, ποια διεύθυνση ζήτησε ποια σελίδα και πότε) για
         τον εντοπισμό και τη διόρθωση προβλημάτων.
       </p>
-
-      <h2>Πώς επεξεργάζεται το υλικό σας: AI</h2>
       <p>
-        Το AgoraNote χρησιμοποιεί μοντέλα AI για να χωρίσει το υλικό σας σε κεφάλαια, να γράψει το υλικό
-        μελέτης και τις ερωτήσεις των κουίζ, και να μετατρέψει τις ηχογραφήσεις σε κείμενο. Αυτά τα μοντέλα
-        τρέχουν στον υπολογιστή του ίδιου του AgoraNote, οπότε το υλικό σας δεν στέλνεται σε καμία εταιρεία
-        AI και δεν χρησιμοποιείται για την εκπαίδευση μοντέλων AI.
+        Οι διακομιστές και η βάση δεδομένων του AgoraNote φιλοξενούνται από τη{" "}
+        <a href="https://railway.com/legal/privacy">Railway</a>, μια εταιρεία με έδρα στις Ηνωμένες
+        Πολιτείες, στο κέντρο δεδομένων της στην Ολλανδία (ΕΕ).
+      </p>
+
+      <h2>Πώς επεξεργάζεται το υλικό σας: OpenAI</h2>
+      <p>
+        Το AgoraNote χρησιμοποιεί μοντέλα AI της{" "}
+        <a href="https://openai.com/policies/privacy-policy/">OpenAI</a>, μιας εταιρείας με έδρα στις
+        Ηνωμένες Πολιτείες, για να μετατρέψει τις ηχογραφήσεις σε κείμενο, να χωρίσει το υλικό σας σε
+        κεφάλαια και να γράψει το υλικό μελέτης και τις ερωτήσεις των κουίζ. Για τον σκοπό αυτό, οι
+        ηχογραφήσεις σας και το κείμενο του υλικού σας στέλνονται στην OpenAI.
+      </p>
+      <p>
+        Η OpenAI δεν χρησιμοποιεί όσα στέλνει το AgoraNote για να εκπαιδεύσει τα μοντέλα AI της. Μπορεί να
+        κρατήσει το κείμενο για έως 30 ημέρες, για τον εντοπισμό κατάχρησης της υπηρεσίας της, και μετά
+        το διαγράφει. Οι ηχογραφήσεις που στέλνονται για μετατροπή σε κείμενο δεν φυλάσσονται.
       </p>
 
       <h2>Στο πρόγραμμα περιήγησής σας</h2>

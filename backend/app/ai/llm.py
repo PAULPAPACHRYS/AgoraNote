@@ -1,7 +1,7 @@
 """
 Talking to the LLM: one implementation of the OpenAI-compatible Chat Completions API
 
-the same code works with Ollama running locally (its /v1 endpoint), OpenAI and OpenRouter
+the same code works with Ollama running locally (its /v1 endpoint) and OpenAI (gpt-6-luna when deployed)
 only LLM_BASE_URL, LLM_MODEL and LLM_API_KEY change, plain httpx, no vendor SDK
 
 One call = one HTTP POST to {LLM_BASE_URL}/chat/completions with a "system" message (the
@@ -53,16 +53,25 @@ def complete_json(system: str, user: str, schema: dict | None = None, name: str 
     body = {
         "model": config.LLM_MODEL,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        "temperature": 0.3,  # fairly deterministic: we want faithful summaries, not creativity
-        "max_tokens": MAX_COMPLETION_TOKENS,
         "response_format": (
             {"type": "json_schema", "json_schema": {"name": name, "schema": schema}}
             if schema
             else {"type": "json_object"}
         ),
     }
+    openai = "api.openai.com" in config.LLM_BASE_URL
+    # the cap on the reply has two names: OpenAI's newer models only accept "max_completion_tokens"
+    # (and reject "max_tokens"), while Ollama still only reads the older "max_tokens"
+    if openai:
+        body["max_completion_tokens"] = MAX_COMPLETION_TOKENS
+    else:
+        body["max_tokens"] = MAX_COMPLETION_TOKENS
     if config.LLM_REASONING_EFFORT:
         body["reasoning_effort"] = config.LLM_REASONING_EFFORT
+    # fairly deterministic: we want faithful summaries, not creativity. OpenAI's models accept a
+    # temperature only with reasoning switched off ("none"); while they think, only the default works
+    if not openai or config.LLM_REASONING_EFFORT == "none":
+        body["temperature"] = 0.3
     headers = {"Authorization": f"Bearer {config.LLM_API_KEY}"} if config.LLM_API_KEY else {}
     #up to LLM_TIMEOUT_SECONDS for the reply, but give up after 10 s if the server can't be reached
     timeout = httpx.Timeout(config.LLM_TIMEOUT_SECONDS, connect=10)

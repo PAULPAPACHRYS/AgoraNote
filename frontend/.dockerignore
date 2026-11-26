@@ -1,0 +1,3 @@
+# files that are never copied into the frontend image (the image installs and builds its own)
+node_modules
+dist

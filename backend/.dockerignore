@@ -1,0 +1,4 @@
+# files that are never copied into the backend image (Python makes these itself when needed)
+__pycache__
+*.pyc
+.pytest_cache
